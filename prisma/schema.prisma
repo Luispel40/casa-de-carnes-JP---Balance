@@ -8,24 +8,21 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
+  id             String     @id @default(cuid())
   name           String?
-  email          String?   @unique
+  email          String?    @unique
   emailVerified  DateTime?
   image          String?
   hashedPassword String?
+  address        String?
+  enteprise      String?
+  phone          String?
   accounts       Account[]
-  sessions       Session[]
-  
-  // 👇 Novos relacionamentos
   categories     Category[]
-  posts          Post[]
   employees      Employee[]
+  posts          Post[]
+  sessions       Session[]
 }
-
-// ========================================
-// 🔒 NextAuth Models
-// ========================================
 
 model Account {
   id                String  @id @default(cuid())
@@ -33,13 +30,13 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? 
-  access_token      String? 
-  expires_at        Int? 
-  token_type        String? 
-  scope             String? 
-  id_token          String? 
-  session_state     String? 
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -61,48 +58,35 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ========================================
-// 📦 Conteúdo e Estrutura do App
-// ========================================
-
-// 🔹 Categoria criada por um User
 model Category {
   id        String   @id @default(cuid())
   name      String
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  posts     Post[]   // relação 1:N — uma categoria pode ter vários posts
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts     Post[]
 }
 
-// 🔹 Post vinculado a um User e a uma Categoria
 model Post {
-  id          String   @id @default(cuid())
-  title       String
-  weight      Float    // “peso” do item/post
-  price       Float    // valor em R$
-  createdAt   DateTime @default(now())
-  
-  userId      String
-  categoryId  String
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  title      String
+  weight     Float
+  price      Float
+  createdAt  DateTime @default(now())
+  userId     String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// 🔹 Funcionário (Employee)
 model Employee {
   id          String   @id @default(cuid())
   name        String
-  role        String   // função / cargo
+  role        String
   salary      Float
   age         Int
   createdAt   DateTime @default(now())
-  
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // 👇 Permissões flexíveis, em formato JSON
   permissions Json?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
