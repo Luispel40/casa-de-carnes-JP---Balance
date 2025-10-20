@@ -8,14 +8,24 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  name          String?
-  email         String?  @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  accounts       Account[]
+  sessions       Session[]
+  
+  // 👇 Novos relacionamentos
+  categories     Category[]
+  posts          Post[]
+  employees      Employee[]
 }
+
+// ========================================
+// 🔒 NextAuth Models
+// ========================================
 
 model Account {
   id                String  @id @default(cuid())
@@ -50,3 +60,49 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// ========================================
+// 📦 Conteúdo e Estrutura do App
+// ========================================
+
+// 🔹 Categoria criada por um User
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts     Post[]   // relação 1:N — uma categoria pode ter vários posts
+  createdAt DateTime @default(now())
+}
+
+// 🔹 Post vinculado a um User e a uma Categoria
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  weight      Float    // “peso” do item/post
+  price       Float    // valor em R$
+  createdAt   DateTime @default(now())
+  
+  userId      String
+  categoryId  String
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+// 🔹 Funcionário (Employee)
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  role        String   // função / cargo
+  salary      Float
+  age         Int
+  createdAt   DateTime @default(now())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 👇 Permissões flexíveis, em formato JSON
+  permissions Json?
+}
+
