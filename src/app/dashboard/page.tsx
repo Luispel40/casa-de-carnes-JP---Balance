@@ -1,14 +1,21 @@
-import { getServerSession } from "next-auth"
-import { redirect } from "next/navigation"
-import { authOptions } from "../api/auth/[...nextauth]/route"
-import DashboardClient from "./dashboard-client"
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import DashboardClient from "./dashboard-client";
+import CardItem from "./card";
+
+
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptions);
 
-  if (!session) {
-    redirect("/login")
+  if (!session?.user?.id) {
+    return <p>Você precisa estar logado.</p>;
   }
 
-  return <DashboardClient user={session.user} />
+  return (
+    <main className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <DashboardClient user={session.user} />
+      <CardItem userId={session.user.id} selected="posts" />
+    </main>
+  );
 }

@@ -1,25 +1,23 @@
-import { Bold, Italic, Underline } from "lucide-react"
+"use client";
 
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/_components/ui/toggle-group"
+import { ToggleGroup, ToggleGroupItem } from "@/_components/ui/toggle-group";
 
-export function ToggleGroupButtons() {
+type Props = {
+  value: string;
+  onChange: (value: string) => void;
+};
+
+export function ToggleGroupButtons({ value, onChange }: Props) {
   return (
-    <ToggleGroup type="single" variant="outline">
-      <ToggleGroupItem value="perfil" aria-label="Toggle profile">
-        Gerenciar conta
-      </ToggleGroupItem>
-      <ToggleGroupItem value="balanço" aria-label="Toggle balance">
-        Meu Balanço
-      </ToggleGroupItem>
-      <ToggleGroupItem value="histórico" aria-label="Toggle history">
-        Meu histórico
-      </ToggleGroupItem>
-      <ToggleGroupItem value="equipe" aria-label="Toggle team">
-        Minha equipe
-      </ToggleGroupItem>
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(val) => val && onChange(val)}
+      className="gap-2"
+    >
+      <ToggleGroupItem value="posts">📄 Posts</ToggleGroupItem>
+      <ToggleGroupItem value="employees">👥 Funcionários</ToggleGroupItem>
+      <ToggleGroupItem value="settings">⚙️ Configurações</ToggleGroupItem>
     </ToggleGroup>
-  )
+  );
 }
