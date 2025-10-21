@@ -21,9 +21,8 @@ export default function DashboardClient({ user }: { user: any }) {
       {/* CardItem muda conforme a seleção */}
       <CardItem userId={user.id} selected={selected} />
 
-      <Button onClick={() => signOut()} variant="destructive" className="mt-4">
-        Logout
-      </Button>
+      <Button onClick={() => signOut()}>Sair</Button>
+      
     </main>
   );
 }

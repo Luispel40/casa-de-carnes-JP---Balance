@@ -1,6 +1,7 @@
 "use client";
 
 import { ToggleGroup, ToggleGroupItem } from "@/_components/ui/toggle-group";
+import { DollarSign, IdCardLanyard, Settings, User } from "lucide-react";
 
 type Props = {
   value: string;
@@ -15,9 +16,20 @@ export function ToggleGroupButtons({ value, onChange }: Props) {
       onValueChange={(val) => val && onChange(val)}
       className="gap-2"
     >
-      <ToggleGroupItem value="posts">📄 Posts</ToggleGroupItem>
-      <ToggleGroupItem value="employees">👥 Funcionários</ToggleGroupItem>
-      <ToggleGroupItem value="settings">⚙️ Configurações</ToggleGroupItem>
+      <ToggleGroupItem value="profile">
+        <User />
+        Perfil
+      </ToggleGroupItem>
+      <ToggleGroupItem value="posts">
+        <DollarSign />
+        Balanço
+      </ToggleGroupItem>
+      <ToggleGroupItem value="employees">
+        <IdCardLanyard />
+         Equipe</ToggleGroupItem>
+      <ToggleGroupItem value="settings">
+        <Settings />
+         Configurações</ToggleGroupItem>
     </ToggleGroup>
   );
 }
