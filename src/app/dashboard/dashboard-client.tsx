@@ -5,6 +5,7 @@ import { Button } from "@/_components/ui/button";
 import { signOut } from "next-auth/react";
 import { ToggleGroupButtons } from "../_components/toggleGroup/page";
 import CardItem from "./card";
+import CardTest from "./cardTest";
 
 export default function DashboardClient({ user }: { user: any }) {
   const [selected, setSelected] = useState("posts"); // valor inicial
@@ -19,7 +20,8 @@ export default function DashboardClient({ user }: { user: any }) {
       <ToggleGroupButtons value={selected} onChange={setSelected} />
 
       {/* CardItem muda conforme a seleção */}
-      <CardItem userId={user.id} selected={selected} />
+      {/* <CardItem userId={user.id} selected={selected} /> */}
+      <CardTest userId={user.id} selected={selected}/>
 
       <Button onClick={() => signOut()}>Sair</Button>
       
