@@ -97,7 +97,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
           <ul className="list-disc list-inside space-y-1">
             {data.map((emp: any) => (
               <li key={emp.id}>
-                {emp.name} ({emp.role}) — R$ {emp.salary}
+                {emp.name}
               </li>
             ))}
           </ul>
