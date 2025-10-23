@@ -11,6 +11,7 @@ import {
 } from "@/_components/ui/card";
 import { Button } from "@/_components/ui/button";
 import { Edit } from "lucide-react";
+import PostItem from "./_components/post";
 
 interface CardItemProps {
   userId: string;
@@ -82,13 +83,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
       case "posts":
         if (!Array.isArray(data)) return <p>Nenhum post encontrado.</p>;
         return (
-          <ul className="list-disc list-inside space-y-1">
-            {data.map((post: any) => (
-              <li key={post.id}>
-                {post.title} — {post.category?.name} (${post.price})
-              </li>
-            ))}
-          </ul>
+          <PostItem data={data} /> 
         );
 
       case "employees":

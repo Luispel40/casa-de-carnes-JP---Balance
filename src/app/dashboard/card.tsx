@@ -7,7 +7,10 @@ import {
   CardTitle,
   CardContent,
   CardDescription,
+  CardAction,
 } from "@/_components/ui/card";
+import { Button } from "@/_components/ui/button";
+import { Edit } from "lucide-react";
 
 interface CardItemProps {
   userId: string;
@@ -22,12 +25,14 @@ export default function CardItem({ userId, selected }: CardItemProps) {
     if (!selected || !userId) return;
     setLoading(true);
 
+    
+
     const fetchData = async () => {
       try {
         let endpoint = "";
 
         switch (selected) {
-          case "perfil":
+          case "profile":
             endpoint = `/api/user/${userId}`;
             break;
           case "posts":
@@ -45,6 +50,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
 
         const res = await fetch(endpoint);
         const json = await res.json();
+        console.log("Buscando endpoint:", endpoint);
         setData(json);
       } catch (err) {
         console.error("Erro ao buscar dados:", err);
@@ -61,9 +67,10 @@ export default function CardItem({ userId, selected }: CardItemProps) {
     if (!data) return <p>Selecione uma categoria</p>;
 
     switch (selected) {
-      case "perfil":
+        
+      case "profile":
         return (
-          <div className="space-y-2">
+          <div className="space-y-2" key={data.id}>
             <p><strong>Nome:</strong> {data.name}</p>
             <p><strong>Email:</strong> {data.email}</p>
             <p><strong>Telefone:</strong> {data.phone}</p>
@@ -73,6 +80,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
         );
 
       case "posts":
+        if (!Array.isArray(data)) return <p>Nenhum post encontrado.</p>;
         return (
           <ul className="list-disc list-inside space-y-1">
             {data.map((post: any) => (
@@ -84,17 +92,19 @@ export default function CardItem({ userId, selected }: CardItemProps) {
         );
 
       case "employees":
+        if (!Array.isArray(data)) return <p>Nenhum funcionário encontrado.</p>;
         return (
           <ul className="list-disc list-inside space-y-1">
             {data.map((emp: any) => (
               <li key={emp.id}>
-                {emp.name} ({emp.role}) — R$ {emp.salary}
+                {emp.name}
               </li>
             ))}
           </ul>
         );
 
       case "categories":
+        if (!Array.isArray(data)) return <p>Nenhum funcionário encontrado.</p>;
         return (
           <ul className="list-disc list-inside space-y-2">
             {data.map((cat: any) => (
@@ -114,6 +124,11 @@ export default function CardItem({ userId, selected }: CardItemProps) {
     <Card className="w-96">
       <CardHeader>
         <CardTitle>Seção: {selected}</CardTitle>
+        <CardAction>
+            <Button size="sm" variant="outline">
+                <Edit /> 
+            </Button>
+        </CardAction>
         <CardDescription>
           Dados relacionados a <strong>{selected}</strong>
         </CardDescription>
