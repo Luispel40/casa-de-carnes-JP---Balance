@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Card,
   CardHeader,
@@ -21,12 +21,11 @@ interface CardItemProps {
 export default function CardTest({ userId, selected }: CardItemProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   useEffect(() => {
     if (!selected || !userId) return;
     setLoading(true);
-
-    
 
     const fetchData = async () => {
       try {
@@ -63,12 +62,24 @@ export default function CardTest({ userId, selected }: CardItemProps) {
     fetchData();
   }, [selected, userId]);
 
+  // Obtém categorias únicas dos posts (memoizado para performance)
+  const categories = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    return Array.from(new Set(data.map((post: any) => post.category?.name).filter(Boolean)));
+  }, [data]);
+
+  // Filtra os posts com base na categoria selecionada
+  const filteredPosts = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    if (!selectedCategory) return data;
+    return data.filter((post: any) => post.category?.name === selectedCategory);
+  }, [data, selectedCategory]);
+
   const renderContent = () => {
     if (loading) return <p>Carregando...</p>;
     if (!data) return <p>Selecione uma categoria</p>;
 
     switch (selected) {
-        
       case "profile":
         return (
           <div className="space-y-2" key={data.id}>
@@ -83,7 +94,16 @@ export default function CardTest({ userId, selected }: CardItemProps) {
       case "posts":
         if (!Array.isArray(data)) return <p>Nenhum post encontrado.</p>;
         return (
-          <PostItem data={data} /> 
+          <PostItem
+            data={categories.map(name => ({ id: name, title: name }))}
+            onSelectCategory={setSelectedCategory}
+          >
+            {filteredPosts.map((post: any) => (
+              <li key={post.id}>
+                {post.title} — {post.category?.name} (${post.price})
+              </li>
+            ))}
+          </PostItem>
         );
 
       case "employees":
@@ -91,15 +111,13 @@ export default function CardTest({ userId, selected }: CardItemProps) {
         return (
           <ul className="list-disc list-inside space-y-1">
             {data.map((emp: any) => (
-              <li key={emp.id}>
-                {emp.name}
-              </li>
+              <li key={emp.id}>{emp.name}</li>
             ))}
           </ul>
         );
 
       case "categories":
-        if (!Array.isArray(data)) return <p>Nenhum funcionário encontrado.</p>;
+        if (!Array.isArray(data)) return <p>Nenhuma categoria encontrada.</p>;
         return (
           <ul className="list-disc list-inside space-y-2">
             {data.map((cat: any) => (
@@ -120,9 +138,9 @@ export default function CardTest({ userId, selected }: CardItemProps) {
       <CardHeader>
         <CardTitle>Seção: {selected}</CardTitle>
         <CardAction>
-            <Button size="sm" variant="outline">
-                <Edit /> 
-            </Button>
+          <Button size="sm" variant="outline">
+            <Edit /> 
+          </Button>
         </CardAction>
         <CardDescription>
           Dados relacionados a <strong>{selected}</strong>

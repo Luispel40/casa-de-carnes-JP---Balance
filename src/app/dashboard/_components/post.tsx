@@ -1,25 +1,27 @@
-interface Post {
-  id: string;
-  title: string;
-  category?: { name: string };
-  price: number;
-}
+import { NativeSelect } from "@/_components/ui/native-select";
 
 interface PostItemProps {
-  data: Post[];
+  data: { id: string; title: string }[];
+  onSelectCategory?: (value: string) => void;
   children?: React.ReactNode;
 }
 
-const PostItem: React.FC<PostItemProps> = ({ data, children }) => {
+const PostItem: React.FC<PostItemProps> = ({ data, onSelectCategory, children }) => {
   return (
-    <ul className="list-disc list-inside space-y-1">
-      {data.map((post) => (
-        <li key={post.id}>
-          {post.title} — {post.category?.name} (${post.price})
-        </li>
-      ))}
-      {children}
-    </ul>
+    <>
+      <NativeSelect onChange={(e) => onSelectCategory?.(e.target.value)}>
+        <option value="">Todas as categorias</option>
+        {data.map((item) => (
+          <option key={item.id} value={item.title}>
+            {item.title}
+          </option>
+        ))}
+      </NativeSelect>
+
+      <ul className="list-disc list-inside space-y-1 mt-3">
+        {children}
+      </ul>
+    </>
   );
 };
 
