@@ -12,6 +12,8 @@ import {
 import { Button } from "@/_components/ui/button";
 import { Edit } from "lucide-react";
 import PostItem from "./_components/post";
+import { NativeSelect } from "@/_components/ui/native-select";
+import SettingsPopup from "_components/SettingsPopup";
 
 interface CardItemProps {
   userId: string;
@@ -19,10 +21,16 @@ interface CardItemProps {
 }
 
 export default function CardTest({ userId, selected }: CardItemProps) {
+  // 🔹 Todos os Hooks ficam aqui no topo
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
+  // ✅ Hooks para settings
+  const [selectedType, setSelectedType] = useState("");
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  // Carrega os dados
   useEffect(() => {
     if (!selected || !userId) return;
     setLoading(true);
@@ -41,8 +49,8 @@ export default function CardTest({ userId, selected }: CardItemProps) {
           case "employees":
             endpoint = `/api/employees/${userId}`;
             break;
-          case "categories":
-            endpoint = `/api/categories/${userId}`;
+          case "settings":
+            endpoint = `/api/user/${userId}`;
             break;
           default:
             return;
@@ -62,19 +70,34 @@ export default function CardTest({ userId, selected }: CardItemProps) {
     fetchData();
   }, [selected, userId]);
 
-  // Obtém categorias únicas dos posts (memoizado para performance)
+  // Memo de categorias
   const categories = useMemo(() => {
     if (!Array.isArray(data)) return [];
-    return Array.from(new Set(data.map((post: any) => post.category?.name).filter(Boolean)));
+    return Array.from(
+      new Set(data.map((post: any) => post.category?.name).filter(Boolean))
+    );
   }, [data]);
 
-  // Filtra os posts com base na categoria selecionada
+  // Filtra posts
   const filteredPosts = useMemo(() => {
     if (!Array.isArray(data)) return [];
     if (!selectedCategory) return data;
     return data.filter((post: any) => post.category?.name === selectedCategory);
   }, [data, selectedCategory]);
 
+  // ✅ Funções para o popup
+  const handleAdd = () => {
+    if (!selectedType) return alert("Selecione um tipo antes de adicionar.");
+    setIsPopupOpen(true);
+  };
+
+  const handleSubmit = (formData: any) => {
+    console.log("Novo item adicionado:", selectedType, formData);
+    setIsPopupOpen(false);
+    // Aqui você pode fazer um POST para o backend (ex: /api/{selectedType})
+  };
+
+  // Renderização condicional
   const renderContent = () => {
     if (loading) return <p>Carregando...</p>;
     if (!data) return <p>Selecione uma categoria</p>;
@@ -111,21 +134,36 @@ export default function CardTest({ userId, selected }: CardItemProps) {
         return (
           <ul className="list-disc list-inside space-y-1">
             {data.map((emp: any) => (
-              <li key={emp.id}>{emp.name}</li>
+              <li key={emp.id}>{emp.name} ({emp.role})</li>
             ))}
           </ul>
         );
 
-      case "categories":
-        if (!Array.isArray(data)) return <p>Nenhuma categoria encontrada.</p>;
+      case "settings":
         return (
-          <ul className="list-disc list-inside space-y-2">
-            {data.map((cat: any) => (
-              <li key={cat.id}>
-                <strong>{cat.name}</strong> — {cat.posts.length} produtos
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            <NativeSelect
+              onChange={(e) => setSelectedType(e.target.value)}
+              value={selectedType}
+            >
+              <option value="">Selecione um tipo</option>
+              <option value="categories">Categoria</option>
+              <option value="employees">Funcionário</option>
+              <option value="posts">Post</option>
+            </NativeSelect>
+
+            <Button onClick={handleAdd} className="w-full">
+              Adicionar
+            </Button>
+
+            {isPopupOpen && (
+              <SettingsPopup
+                type={selectedType}
+                onClose={() => setIsPopupOpen(false)}
+                onSubmit={handleSubmit}
+              />
+            )}
+          </div>
         );
 
       default:
@@ -136,15 +174,13 @@ export default function CardTest({ userId, selected }: CardItemProps) {
   return (
     <Card className="w-96">
       <CardHeader>
-        <CardTitle>Seção: {selected}</CardTitle>
+        <CardTitle>Informações</CardTitle>
         <CardAction>
           <Button size="sm" variant="outline">
-            <Edit /> 
+            <Edit />
           </Button>
         </CardAction>
-        <CardDescription>
-          Dados relacionados a <strong>{selected}</strong>
-        </CardDescription>
+        <CardDescription></CardDescription>
       </CardHeader>
       <CardContent>{renderContent()}</CardContent>
     </Card>

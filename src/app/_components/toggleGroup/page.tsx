@@ -29,7 +29,7 @@ export function ToggleGroupButtons({ value, onChange }: Props) {
          Equipe</ToggleGroupItem>
       <ToggleGroupItem value="settings">
         <Settings />
-         Configurações</ToggleGroupItem>
+        </ToggleGroupItem>
     </ToggleGroup>
   );
 }

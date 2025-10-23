@@ -16,10 +16,8 @@ export default function DashboardClient({ user }: { user: any }) {
         Bem-vindo, {user?.name || "Usuário"}
       </h1>
 
-      {/* ToggleGroup controlado */}
       <ToggleGroupButtons value={selected} onChange={setSelected} />
 
-      {/* CardItem muda conforme a seleção */}
       {/* <CardItem userId={user.id} selected={selected} /> */}
       <CardTest userId={user.id} selected={selected}/>
 
