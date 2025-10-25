@@ -149,7 +149,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
               <option value="">Selecione um tipo</option>
               <option value="categories">Categoria</option>
               <option value="employees">Funcionário</option>
-              <option value="posts">Post</option>
+              <option value="posts">Item</option>
             </NativeSelect>
 
             <Button onClick={handleAdd} className="w-full">

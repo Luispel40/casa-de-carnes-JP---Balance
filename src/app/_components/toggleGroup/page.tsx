@@ -1,7 +1,7 @@
 "use client";
 
 import { ToggleGroup, ToggleGroupItem } from "@/_components/ui/toggle-group";
-import { DollarSign, IdCardLanyard, Settings, User } from "lucide-react";
+import { DollarSign, IdCardLanyard, Plus, User } from "lucide-react";
 
 type Props = {
   value: string;
@@ -28,7 +28,7 @@ export function ToggleGroupButtons({ value, onChange }: Props) {
         <IdCardLanyard />
          Equipe</ToggleGroupItem>
       <ToggleGroupItem value="settings">
-        <Settings />
+        <Plus />
         </ToggleGroupItem>
     </ToggleGroup>
   );
