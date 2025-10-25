@@ -8,9 +8,10 @@ export async function GET(
   try {
     const categories = await db.category.findMany({
       where: { userId: params.userId },
-      include: { posts: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     });
-    return NextResponse.json(categories); // ← array
+    return NextResponse.json(categories);
   } catch (error) {
     console.error("Erro ao buscar categorias:", error);
     return NextResponse.json(

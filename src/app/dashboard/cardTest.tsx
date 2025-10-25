@@ -106,11 +106,21 @@ export default function CardTest({ userId, selected }: CardItemProps) {
       case "profile":
         return (
           <div className="space-y-2" key={data.id}>
-            <p><strong>Nome:</strong> {data.name}</p>
-            <p><strong>Email:</strong> {data.email}</p>
-            <p><strong>Telefone:</strong> {data.phone}</p>
-            <p><strong>Endereço:</strong> {data.address}</p>
-            <p><strong>Empresa:</strong> {data.enteprise}</p>
+            <p>
+              <strong>Nome:</strong> {data.name}
+            </p>
+            <p>
+              <strong>Email:</strong> {data.email}
+            </p>
+            <p>
+              <strong>Telefone:</strong> {data.phone}
+            </p>
+            <p>
+              <strong>Endereço:</strong> {data.address}
+            </p>
+            <p>
+              <strong>Empresa:</strong> {data.enteprise}
+            </p>
           </div>
         );
 
@@ -118,7 +128,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
         if (!Array.isArray(data)) return <p>Nenhum post encontrado.</p>;
         return (
           <PostItem
-            data={categories.map(name => ({ id: name, title: name }))}
+            data={categories.map((name) => ({ id: name, title: name }))}
             onSelectCategory={setSelectedCategory}
           >
             {filteredPosts.map((post: any) => (
@@ -134,7 +144,9 @@ export default function CardTest({ userId, selected }: CardItemProps) {
         return (
           <ul className="list-disc list-inside space-y-1">
             {data.map((emp: any) => (
-              <li key={emp.id}>{emp.name} ({emp.role})</li>
+              <li key={emp.id}>
+                {emp.name} ({emp.role})
+              </li>
             ))}
           </ul>
         );
@@ -156,11 +168,12 @@ export default function CardTest({ userId, selected }: CardItemProps) {
               Adicionar
             </Button>
 
-            {isPopupOpen && (
+            {isPopupOpen && selectedType && (
               <SettingsPopup
                 type={selectedType}
                 onClose={() => setIsPopupOpen(false)}
-                onSubmit={handleSubmit}
+                onSubmit={(data) => console.log("Novo item:", data)}
+                userId={userId} // ✅ passa o userId
               />
             )}
           </div>
