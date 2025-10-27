@@ -42,11 +42,18 @@ export async function DELETE(
   }
 }
 
+interface EmployeeBody {
+  id?: string; // pode ser opcional se for POST
+  name: string;
+  role: string;
+  salary: number;
+  age: number;
+}
 
 export async function PUT(req: Request, context: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await context.params;
-    const body = await req.json();
+    const body: EmployeeBody = await req.json();
     const { id, name, role, salary, age } = body;
 
     console.log("🟢 PUT /employees:", { userId, id, name, role, salary, age });

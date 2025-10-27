@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       user: { connect: { id: userId } },
     };
 
-    // ✅ Só adiciona se houver categoria
+    
     if (categoryId) {
       data.category = { connect: { id: categoryId } };
     }

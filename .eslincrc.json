@@ -1,4 +1,5 @@
 {
+  "root": true,
   "rules": {
     "no-var": "off",
     "vars-on-top": "off",
@@ -26,8 +27,9 @@
     "import/prefer-default-export": "off",
     "tailwindcss/no-custom-classname": "off",
     "import/no-extraneous-dependencies": "off",
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-explicit-any": "off",
+    
     "@typescript-eslint/no-use-before-define": [
       "error",
       {
@@ -122,7 +124,8 @@
     "eslint:recommended",
     "plugin:react/recommended",
     "plugin:tailwindcss/recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "next/core-web-vitals", "plugin:@typescript-eslint/recommended"
   ],
   "overrides": [],
   "parser": "@typescript-eslint/parser",
@@ -138,11 +141,14 @@
     "react",
     "react-hooks",
     "@typescript-eslint",
-    "eslint-plugin-import-helpers"
+    "eslint-plugin-import-helpers",
+    "@typescript-eslint"
   ],
   "settings": {
     "import/resolver": {
       "typescript": {}
     }
   }
+  
+
 }

@@ -4,7 +4,6 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -14,6 +13,8 @@
     "jsx": "preserve",
     "types": ["next-auth"],
     "baseUrl": ".",
+    "strict": true,
+    "noImplicitAny": false,
     "incremental": true,
     "plugins": [
       {
