@@ -22,7 +22,7 @@ export function ToggleGroupButtons({ value, onChange }: Props) {
       </ToggleGroupItem>
       <ToggleGroupItem value="posts">
         <DollarSign />
-        Balanço
+        Estoque
       </ToggleGroupItem>
       <ToggleGroupItem value="employees">
         <IdCardLanyard />

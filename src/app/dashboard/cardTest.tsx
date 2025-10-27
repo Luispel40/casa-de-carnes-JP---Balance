@@ -85,16 +85,36 @@ export default function CardTest({ userId, selected }: CardItemProps) {
     return data.filter((post: any) => post.category?.name === selectedCategory);
   }, [data, selectedCategory]);
 
-  // ✅ Funções para o popup
   const handleAdd = () => {
     if (!selectedType) return alert("Selecione um tipo antes de adicionar.");
     setIsPopupOpen(true);
   };
 
-  const handleSubmit = (formData: any) => {
-    console.log("Novo item adicionado:", selectedType, formData);
-    setIsPopupOpen(false);
-    // Aqui você pode fazer um POST para o backend (ex: /api/{selectedType})
+  const handleSubmit = async (formData: any) => {
+    try {
+      const body = { ...formData, userId }; // adiciona userId se necessário
+
+      const res = await fetch(`/api/${selectedType}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error("Erro ao salvar");
+
+      const savedItem = await res.json();
+
+      // 🔹 Atualiza o estado local (para exibir o novo item na tela sem recarregar)
+      setData((prev: any) =>
+        Array.isArray(prev) ? [...prev, savedItem] : [savedItem]
+      );
+
+      // 🔹 Fecha o popup
+      setIsPopupOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar o item");
+    }
   };
 
   // Renderização condicional
@@ -172,8 +192,40 @@ export default function CardTest({ userId, selected }: CardItemProps) {
               <SettingsPopup
                 type={selectedType}
                 onClose={() => setIsPopupOpen(false)}
-                onSubmit={(data) => console.log("Novo item:", data)}
-                userId={userId} // ✅ passa o userId
+                onSubmit={async (formData) => {
+                  try {
+                    // 🔹 Adiciona o userId antes de enviar
+                    const body = { ...formData, userId };
+
+                    // Define a URL conforme o tipo
+                    const endpoint = `/api/${selectedType}`;
+
+                    console.log("📦 Enviando para:", endpoint, body);
+
+                    const res = await fetch(endpoint, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(body),
+                    });
+
+                    if (!res.ok) {
+                      const text = await res.text();
+                      console.error("❌ Erro ao criar item:", text);
+                      return;
+                    }
+
+                    const json = await res.json();
+                    console.log("✅ Criado com sucesso:", json);
+
+                    // Se quiser, atualiza a lista local:
+                    setData((prev: any) =>
+                      Array.isArray(prev) ? [...prev, json] : [json]
+                    );
+                  } catch (err) {
+                    console.error("⚠️ Falha ao salvar:", err);
+                  }
+                }}
+                userId={userId}
               />
             )}
           </div>

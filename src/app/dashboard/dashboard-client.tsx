@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/_components/ui/button";
 import { signOut } from "next-auth/react";
 import { ToggleGroupButtons } from "../_components/toggleGroup/page";
-import CardItem from "./card";
 import CardTest from "./cardTest";
 
 export default function DashboardClient({ user }: { user: any }) {

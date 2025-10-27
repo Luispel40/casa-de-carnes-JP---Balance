@@ -72,6 +72,8 @@ model Post {
   title      String
   weight     Float
   price      Float
+  sellPrice  Float?
+  isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   userId     String
   categoryId String

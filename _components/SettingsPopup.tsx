@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/_components/ui/button";
 import { Input } from "@/_components/ui/input";
 import { NativeSelect } from "@/_components/ui/native-select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/_components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/_components/ui/card";
 
 // 🔹 Schema de campos por tipo
 const FIELD_SCHEMAS: Record<
@@ -13,17 +18,46 @@ const FIELD_SCHEMAS: Record<
 > = {
   categories: [
     { name: "name", label: "Nome da Categoria", placeholder: "Ex: Bovina" },
-    { name: "description", label: "Descrição", placeholder: "Ex: Cortes com osso" },
+    {
+      name: "description",
+      label: "Descrição",
+      placeholder: "Ex: Cortes com osso",
+    },
   ],
   employees: [
-    { name: "name", label: "Nome do Funcionário", placeholder: "Ex: João Silva" },
+    {
+      name: "name",
+      label: "Nome do Funcionário",
+      placeholder: "Ex: João Silva",
+    },
     { name: "role", label: "Cargo", placeholder: "Ex: Açougueiro" },
-    { name: "email", label: "E-mail", type: "email", placeholder: "Ex: joao@email.com" },
+    {
+      name: "email",
+      label: "E-mail",
+      type: "email",
+      placeholder: "Ex: joao@email.com",
+    },
   ],
   posts: [
-    { name: "title", label: "Título do Produto", placeholder: "Ex: Picanha Premium" },
+    {
+      name: "title",
+      label: "Título do Produto",
+      placeholder: "Ex: Picanha Premium",
+    },
     { name: "price", label: "Preço", type: "number", placeholder: "Ex: 59.90" },
-    // ⚠️ A categoria agora será carregada dinamicamente via NativeSelect
+    {
+      name: "sellPrice",
+      label: "Preço de Venda",
+      type: "number",
+      placeholder: "Ex: 79.90",
+    },
+    { name: "isActive", label: "Disponivel", type: "checkbox" },
+    {
+      name: "weight",
+      label: "Peso (kg)",
+      type: "number",
+      placeholder: "Ex: 1.5",
+    },
   ],
 };
 
@@ -34,8 +68,12 @@ interface SettingsPopupProps {
   userId: string; // 👈 adiciona isso aqui
 }
 
-
-export default function SettingsPopup({ type, onClose, onSubmit, userId }: SettingsPopupProps) {
+export default function SettingsPopup({
+  type,
+  onClose,
+  onSubmit,
+  userId,
+}: SettingsPopupProps) {
   const [formData, setFormData] = useState<any>({});
   const [categories, setCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -44,29 +82,32 @@ export default function SettingsPopup({ type, onClose, onSubmit, userId }: Setti
 
   // 🔹 Busca as categorias do banco quando o tipo for "posts"
   useEffect(() => {
-  if (type !== "posts" || !userId) return;
+    if (type !== "posts" || !userId) return;
 
-  const fetchCategories = async () => {
-    setLoadingCategories(true);
-    try {
-      const res = await fetch(`/api/categories/${userId}`); // 👈 inclui o userId
-      if (!res.ok) throw new Error("Erro ao buscar categorias");
-      const json = await res.json();
-      setCategories(json);
-    } catch (err) {
-      console.error("Erro ao carregar categorias:", err);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const res = await fetch(`/api/categories/${userId}`); // 👈 inclui o userId
+        if (!res.ok) throw new Error("Erro ao buscar categorias");
+        const json = await res.json();
+        setCategories(json);
+      } catch (err) {
+        console.error("Erro ao carregar categorias:", err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
 
-  fetchCategories();
-}, [type, userId]);
+    fetchCategories();
+  }, [type, userId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
-  };
+  const { name, value, type, checked } = e.target as HTMLInputElement;
+  setFormData((prev: any) => ({
+    ...prev,
+    [name]: type === "checkbox" ? checked : value,
+  }));
+};
 
   const handleSubmit = () => {
     onSubmit(formData);
@@ -94,7 +135,9 @@ export default function SettingsPopup({ type, onClose, onSubmit, userId }: Setti
             <>
               {fields.map((field) => (
                 <div key={field.name} className="flex flex-col">
-                  <label className="text-sm font-medium mb-1">{field.label}</label>
+                  <label className="text-sm font-medium mb-1">
+                    {field.label}
+                  </label>
                   <Input
                     name={field.name}
                     type={field.type || "text"}
@@ -115,7 +158,9 @@ export default function SettingsPopup({ type, onClose, onSubmit, userId }: Setti
                     onChange={handleChange}
                   >
                     <option value="">
-                      {loadingCategories ? "Carregando..." : "Selecione uma categoria"}
+                      {loadingCategories
+                        ? "Carregando..."
+                        : "Selecione uma categoria"}
                     </option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
