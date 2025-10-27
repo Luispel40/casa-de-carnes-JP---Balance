@@ -13,6 +13,7 @@ import { Button } from "@/_components/ui/button";
 import { CircleUserRound, Edit, Plus, Trash } from "lucide-react";
 import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
+import { formatCurrency } from "@/helpers/format-currency";
 
 interface Employee {
   id: string;
@@ -27,6 +28,7 @@ export default function EquipPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const handleSubmit = async (formData: any) => {
     try {
@@ -123,7 +125,12 @@ export default function EquipPage() {
                   >
                     <Trash />
                   </Button>
-                  <Button variant="ghost" size="icon" className="w-8 h-8">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-8 h-8"
+                    onClick={() => setEditingEmployee(emp)}
+                  >
                     <Edit />
                   </Button>
                 </CardAction>
@@ -151,14 +158,60 @@ export default function EquipPage() {
       >
         Adicionar Funcionário <Plus />
       </Button>
-      {isPopupOpen && (
+      {(isPopupOpen || editingEmployee) && (
         <SettingsPopup
           type="employees"
-          onClose={() => setIsPopupOpen(false)}
-          onSubmit={handleSubmit}
           userId={session.user?.id}
+          onClose={() => {
+            setIsPopupOpen(false);
+            setEditingEmployee(null);
+          }}
+          onSubmit={async (formData) => {
+            if (editingEmployee) {
+              try {
+                const res = await fetch(`/api/employees/${session.user?.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id: editingEmployee.id, // 👈 obrigatório
+                    name: formData.name,
+                    role: formData.role,
+                    salary: formData.salary,
+                    age: formData.age,
+                  }),
+                });
+
+                if (!res.ok) throw new Error("Erro ao atualizar funcionário");
+                const updated = await res.json();
+
+                setEmployees((prev) =>
+                  prev.map((emp) => (emp.id === updated.id ? updated : emp))
+                );
+
+                toast.success("Funcionário atualizado com sucesso!");
+              } catch (err) {
+                console.error("Erro ao editar funcionário:", err);
+                toast.error("Erro ao editar funcionário");
+              }
+            } else {
+              // 🔹 Modo criação (POST)
+              await handleSubmit(formData);
+            }
+
+            setIsPopupOpen(false);
+            setEditingEmployee(null);
+          }}
+          initialData={editingEmployee || {}}
+          mode={editingEmployee ? "edit" : "create"}
         />
       )}
+      <p>
+        Total mensal: 
+        {formatCurrency(employees
+          .reduce((acc, emp) => acc + Number(emp.salary || 0), 0)
+          )}
+      </p>
+
     </div>
   );
 }

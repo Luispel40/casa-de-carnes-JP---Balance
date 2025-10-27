@@ -67,7 +67,9 @@ interface SettingsPopupProps {
   type: string;
   onClose: () => void;
   onSubmit: (formData: any) => void;
-  userId: string; // 👈 adiciona isso aqui
+  userId: string;
+  initialData?: any;
+  mode?: "create" | "edit";
 }
 
 export default function SettingsPopup({
@@ -75,8 +77,10 @@ export default function SettingsPopup({
   onClose,
   onSubmit,
   userId,
+  initialData,
+  mode = "create",
 }: SettingsPopupProps) {
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>({initialData});
   const [categories, setCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
 
@@ -121,7 +125,7 @@ export default function SettingsPopup({
       <Card className="w-full max-w-md bg-white shadow-2xl">
         <CardHeader className="flex justify-between items-center">
           <CardTitle className="capitalize">
-            Adicionar {type === "" ? "item" : type.slice(0, -1)}
+            {mode === "edit" ? "Editar" : "Adicionar"} {type === "" ? "item" : type.slice(0, -1)}
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             ✕
@@ -177,7 +181,7 @@ export default function SettingsPopup({
 
           {fields.length > 0 && (
             <Button className="w-full mt-4" onClick={handleSubmit}>
-              Salvar
+              {mode === "edit" ? "Salvar alterações" : "Salvar"}
             </Button>
           )}
         </CardContent>
