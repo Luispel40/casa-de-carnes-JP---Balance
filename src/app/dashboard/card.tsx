@@ -22,6 +22,8 @@ interface CardItemProps {
   selected: string;
 }
 
+
+
 export default function CardItem({ userId, selected }: CardItemProps) {
   // 🔹 Todos os Hooks ficam aqui no topo
   const [data, setData] = useState<any>(null);
