@@ -12,6 +12,8 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+
+        console.log("📩 Login tentado:", credentials?.email);
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await db.user.findUnique({
@@ -19,15 +21,18 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) return null;
+        console.log("❌ Usuário não encontrado no banco");
 
         const passwordMatch = await bcrypt.compare(
           credentials.password,
           ( user as any).hashedPassword
         );
+        console.log("❌ Senha incorreta para:", credentials.email);
 
         if (!passwordMatch) return null;
-
-        return user; // será injetado em "session.user"
+        
+        console.log("✅ Login OK para:", user.email);
+        return user; 
       },
     }),
   ],
