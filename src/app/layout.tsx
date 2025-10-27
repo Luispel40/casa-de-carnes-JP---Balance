@@ -2,6 +2,7 @@ import Providers from "./providers"
 import "./globals.css"
 
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 
 const fonte = Inter({
   subsets: ["latin"],
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <Providers>{children}</Providers>
+        <Toaster />
       </body>
     </html>
   )

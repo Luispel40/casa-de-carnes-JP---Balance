@@ -4,7 +4,7 @@ import { db } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, description, userId } = body;
+    const { name, userId } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });

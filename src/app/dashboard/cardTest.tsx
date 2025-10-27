@@ -14,6 +14,8 @@ import { Edit } from "lucide-react";
 import PostItem from "./_components/post";
 import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";
+import { toast } from "sonner";
+import { formatCurrency } from "@/helpers/format-currency";
 
 interface CardItemProps {
   userId: string;
@@ -58,7 +60,6 @@ export default function CardTest({ userId, selected }: CardItemProps) {
 
         const res = await fetch(endpoint);
         const json = await res.json();
-        console.log("Buscando endpoint:", endpoint);
         setData(json);
       } catch (err) {
         console.error("Erro ao buscar dados:", err);
@@ -90,32 +91,6 @@ export default function CardTest({ userId, selected }: CardItemProps) {
     setIsPopupOpen(true);
   };
 
-  const handleSubmit = async (formData: any) => {
-    try {
-      const body = { ...formData, userId }; // adiciona userId se necessário
-
-      const res = await fetch(`/api/${selectedType}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) throw new Error("Erro ao salvar");
-
-      const savedItem = await res.json();
-
-      // 🔹 Atualiza o estado local (para exibir o novo item na tela sem recarregar)
-      setData((prev: any) =>
-        Array.isArray(prev) ? [...prev, savedItem] : [savedItem]
-      );
-
-      // 🔹 Fecha o popup
-      setIsPopupOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar o item");
-    }
-  };
 
   // Renderização condicional
   const renderContent = () => {
@@ -152,8 +127,8 @@ export default function CardTest({ userId, selected }: CardItemProps) {
             onSelectCategory={setSelectedCategory}
           >
             {filteredPosts.map((post: any) => (
-              <li key={post.id}>
-                {post.title} — {post.category?.name} (${post.price})
+              <li key={post.id} >
+                {post.isActive && post.title}  {post.sellPrice && post.isActive && `— (${formatCurrency(post.sellPrice)})` }
               </li>
             ))}
           </PostItem>
@@ -199,8 +174,8 @@ export default function CardTest({ userId, selected }: CardItemProps) {
 
                     // Define a URL conforme o tipo
                     const endpoint = `/api/${selectedType}`;
-
-                    console.log("📦 Enviando para:", endpoint, body);
+                    
+                    // console.log("📦 Enviando para:", endpoint, body);
 
                     const res = await fetch(endpoint, {
                       method: "POST",
@@ -210,19 +185,22 @@ export default function CardTest({ userId, selected }: CardItemProps) {
 
                     if (!res.ok) {
                       const text = await res.text();
-                      console.error("❌ Erro ao criar item:", text);
+                      toast.error(`❌ Erro ao criar ${selectedType}: ${text}`);
+                      // console.error("❌ Erro ao criar item:", text);
                       return;
                     }
 
                     const json = await res.json();
-                    console.log("✅ Criado com sucesso:", json);
+                    toast.success(`Criado ${selectedType} com sucesso!`);
+                    // console.log("✅ Criado com sucesso:", json);
 
                     // Se quiser, atualiza a lista local:
                     setData((prev: any) =>
                       Array.isArray(prev) ? [...prev, json] : [json]
                     );
                   } catch (err) {
-                    console.error("⚠️ Falha ao salvar:", err);
+                    toast.error(`⚠️ Falha ao criar ${selectedType}: ${err}`);
+                    // console.error("⚠️ Falha ao salvar:", err);
                   }
                 }}
                 userId={userId}

@@ -18,11 +18,7 @@ const FIELD_SCHEMAS: Record<
 > = {
   categories: [
     { name: "name", label: "Nome da Categoria", placeholder: "Ex: Bovina" },
-    {
-      name: "description",
-      label: "Descrição",
-      placeholder: "Ex: Cortes com osso",
-    },
+    
   ],
   employees: [
     {

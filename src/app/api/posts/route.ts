@@ -12,8 +12,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    // ✅ Monta o objeto dinamicamente
     const data: any = {
       title,
       price: parseFloat(price),
