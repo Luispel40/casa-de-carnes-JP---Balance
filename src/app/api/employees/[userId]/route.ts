@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
 interface EmployeeBody {
@@ -9,10 +9,7 @@ interface EmployeeBody {
   age: number;
 }
 
-export async function GET(
-  req: Request,
-  context: { params: { userId: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   const { userId } = context.params;
 
   try {
@@ -24,10 +21,7 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  req: Request,
-  context: { params: { userId: string } }
-) {
+export async function DELETE(req: NextRequest, context: any) {
   const { id } = await req.json();
 
   if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
@@ -41,10 +35,7 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  req: Request,
-  context: { params: { userId: string } }
-) {
+export async function PUT(req: NextRequest, context: any) {
   const { userId } = context.params;
   const body: EmployeeBody = await req.json();
   const { id, name, role, salary, age } = body;

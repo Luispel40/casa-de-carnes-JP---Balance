@@ -1,10 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
-export async function GET(
-  req: Request,
-  context: { params: { userId: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   const { userId } = context.params;
 
   try {
