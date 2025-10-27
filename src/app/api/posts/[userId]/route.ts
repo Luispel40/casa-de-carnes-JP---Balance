@@ -3,23 +3,18 @@ import { db } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ userId: string }> } // 👈 importante
+  context: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = await context.params; // 👈 await obrigatório
+  const { userId } = await context.params;
 
   try {
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      include: { posts: true },
+    const posts = await db.post.findMany({
+      where: { userId },
+      include: { category: true },
     });
-
-    if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
-    }
-
-    return NextResponse.json(user);
+    return NextResponse.json(posts);
   } catch (error) {
-    console.error("Erro ao buscar usuário:", error);
-    return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 });
+    console.error("Erro ao buscar posts:", error);
+    return NextResponse.json({ error: "Erro ao buscar posts" }, { status: 500 });
   }
 }
