@@ -3,19 +3,18 @@ import { db } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
+  const { userId } = await context.params;
+
   try {
     const posts = await db.post.findMany({
-      where: { userId: params.userId },
+      where: { userId },
       include: { category: true },
     });
-    return NextResponse.json(posts); // ← array
+    return NextResponse.json(posts);
   } catch (error) {
     console.error("Erro ao buscar posts:", error);
-    return NextResponse.json(
-      { error: "Erro ao buscar posts" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao buscar posts" }, { status: 500 });
   }
 }
