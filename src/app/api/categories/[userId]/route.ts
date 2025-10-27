@@ -3,9 +3,9 @@ import { db } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ userId: string }> } // 👈 corrigido
+  context: { params: { userId: string } }
 ) {
-  const { userId } = await context.params; // 👈 await obrigatório
+  const { userId } = context.params;
 
   try {
     const categories = await db.category.findMany({
@@ -13,6 +13,7 @@ export async function GET(
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
+
     return NextResponse.json(categories);
   } catch (error) {
     console.error("Erro ao buscar categorias:", error);

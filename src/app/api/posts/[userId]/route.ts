@@ -3,9 +3,9 @@ import { db } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ userId: string }> }
+  context: { params: { userId: string } }
 ) {
-  const { userId } = await context.params;
+  const { userId } = context.params;
 
   try {
     const posts = await db.post.findMany({

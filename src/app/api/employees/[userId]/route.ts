@@ -11,9 +11,9 @@ interface EmployeeBody {
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ userId: string }> }
+  context: { params: { userId: string } }
 ) {
-  const { userId } = await context.params;
+  const { userId } = context.params;
 
   try {
     const employees = await db.employee.findMany({ where: { userId } });
@@ -26,9 +26,8 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ userId: string }> }
+  context: { params: { userId: string } }
 ) {
-  const { userId } = await context.params;
   const { id } = await req.json();
 
   if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
@@ -44,9 +43,9 @@ export async function DELETE(
 
 export async function PUT(
   req: Request,
-  context: { params: Promise<{ userId: string }> }
+  context: { params: { userId: string } }
 ) {
-  const { userId } = await context.params;
+  const { userId } = context.params;
   const body: EmployeeBody = await req.json();
   const { id, name, role, salary, age } = body;
 
@@ -54,7 +53,8 @@ export async function PUT(
 
   try {
     const existing = await db.employee.findUnique({ where: { id } });
-    if (!existing) return NextResponse.json({ error: "Funcionário não encontrado" }, { status: 404 });
+    if (!existing)
+      return NextResponse.json({ error: "Funcionário não encontrado" }, { status: 404 });
 
     const updated = await db.employee.update({
       where: { id },
@@ -64,6 +64,9 @@ export async function PUT(
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error("Erro ao atualizar funcionário:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar funcionário" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Erro ao atualizar funcionário" },
+      { status: 500 }
+    );
   }
 }
