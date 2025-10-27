@@ -18,3 +18,26 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    }
+
+    await db.employee.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Funcionário deletado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao deletar funcionário:", error);
+    return NextResponse.json({ error: "Erro ao deletar funcionário" }, { status: 500 });
+  }
+}
+
