@@ -28,10 +28,16 @@ const FIELD_SCHEMAS: Record<
     },
     { name: "role", label: "Cargo", placeholder: "Ex: Açougueiro" },
     {
-      name: "email",
-      label: "E-mail",
-      type: "email",
-      placeholder: "Ex: joao@email.com",
+      name: "salary",
+      label: "Salário",
+      type: "number",
+      placeholder: "Ex: 2500.00",
+    },
+    {
+      name: "age",
+      label: "Idade",
+      type: "number",
+      placeholder: "Ex: 25",
     },
   ],
   posts: [
