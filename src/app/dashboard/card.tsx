@@ -10,19 +10,18 @@ import {
   CardAction,
 } from "@/_components/ui/card";
 import { Button } from "@/_components/ui/button";
-import { Edit } from "lucide-react";
+import { ArrowRight, Edit } from "lucide-react";
 import PostItem from "./_components/post";
 import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
 import { formatCurrency } from "@/helpers/format-currency";
+import Link from "next/link";
 
 interface CardItemProps {
   userId: string;
   selected: string;
 }
-
-
 
 export default function CardItem({ userId, selected }: CardItemProps) {
   // 🔹 Todos os Hooks ficam aqui no topo
@@ -217,17 +216,18 @@ export default function CardItem({ userId, selected }: CardItemProps) {
   };
 
   return (
-    <Card className="w-96">
+    <Card className="w-96 min-h-[400px] max-h-[400px]">
       <CardHeader>
-        <CardTitle>Informações</CardTitle>
+        <CardTitle>{data?.name}</CardTitle>
         <CardAction>
-          <Button size="sm" variant="outline">
-            <Edit />
+          <Button size="sm" variant="outline" >
+            <ArrowRight />
+            <Link href="/equip" ></Link>
           </Button>
         </CardAction>
         <CardDescription></CardDescription>
       </CardHeader>
-      <CardContent>{renderContent()}</CardContent>
+      <CardContent className="overflow-auto">{renderContent()}</CardContent>
     </Card>
   );
 }
