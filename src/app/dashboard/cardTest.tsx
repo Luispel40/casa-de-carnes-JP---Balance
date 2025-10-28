@@ -10,7 +10,7 @@ import {
   CardAction,
 } from "@/_components/ui/card";
 import { Button } from "@/_components/ui/button";
-import { ArrowRight, Edit } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import PostItem from "./_components/post";
 import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";

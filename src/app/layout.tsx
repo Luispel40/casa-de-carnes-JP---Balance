@@ -3,6 +3,7 @@ import "./globals.css"
 
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import FooterPage from "./_components/footer/page";
 
 const fonte = Inter({
   subsets: ["latin"],
@@ -24,7 +25,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+        <FooterPage />
+        </Providers>
         <Toaster />
       </body>
     </html>

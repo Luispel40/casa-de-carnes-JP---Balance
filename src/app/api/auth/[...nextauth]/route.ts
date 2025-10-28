@@ -16,10 +16,7 @@ const NEXTAUTH_BASE_URL = process.env.NEXTAUTH_URL
     ? `https://${VERCEL_URL}` 
     : "http://localhost:3000";
 
-// --- Bloco de Criação do Handler do NextAuth ---
 
-// Cria uma cópia das authOptions e adiciona a URL base (se ainda não estiver lá)
-// Isso garante que o NextAuth saiba a URL correta para callbacks no Vercel.
 const finalAuthOptions = {
     ...authOptions,
     // Garante que a URL é configurada. O NextAuth irá priorizar isso.
