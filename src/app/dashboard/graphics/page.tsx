@@ -1,12 +1,13 @@
 "use client"
 
 import { Calendar } from "@/_components/ui/calendar";
-import { Loader } from "lucide-react";
+import { EllipsisIcon, Loader, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useMemo } from "react";
 import { useEffect, useState } from "react";
 import PostItem from "../_components/post";
 import FooterPage from "@/app/_components/footer/page";
+import { Button } from "@/_components/ui/button";
 
 // Função Helper para formatar moeda (usando Intl.NumberFormat para o Real Brasileiro)
 // Foi adicionada pois estava faltando no código original.
@@ -113,8 +114,9 @@ export default function GraphicsPage() {
                     data={categories.map((category) => ({ id: category.id || category, title: category.name || category }))}
                     onSelectCategory={setSelectedCategory}
                 >
-                    <table className="w-full border border-gray-300 p-6">
-                        <tr>
+                    <table className="lg:min-w-lg min-w-full w-[300px] border border-gray-300 p-6 text-sm">
+                        <tbody className="w-full max-h-[200px] overflow-auto ">
+                            <tr>
                             <th>Título</th>
                             <th>Peso</th>
                             <th>Valor</th>
@@ -123,14 +125,21 @@ export default function GraphicsPage() {
                         <tr key={post.id}
                             className="w-full border border-gray-300 p-6">
                                     <td>{post.title}</td>
-                                    <td>{post.weight}</td>
-                                    <td>{post.price}</td>
+                                    <td>{post.weight}kg</td>
+                                    <td>{formatCurrency(post.price)}</td>
+                                    <td><Button 
+                                    variant="ghost"
+                                    size="icon-sm">
+                                        <EllipsisIcon />
+                                        </Button></td>
                         </tr>
                     ))}
+                        </tbody>
                     <tfoot></tfoot>
                     </table>
                 </PostItem>
             )}
+            <Button ><Plus className="mr-2" /> Novo</Button>
            </div>
             </div>
             <FooterPage />

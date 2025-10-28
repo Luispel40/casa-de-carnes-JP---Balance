@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import {
   Card,
@@ -24,6 +25,7 @@ interface CardItemProps {
 }
 
 export default function CardTest({ userId, selected }: CardItemProps) {
+  const router = useRouter();
   // 🔹 Todos os Hooks ficam aqui no topo
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,13 @@ export default function CardTest({ userId, selected }: CardItemProps) {
   // ✅ Hooks para settings
   const [selectedType, setSelectedType] = useState("");
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+  const routes: Record<string, string> = {
+    posts: "/dashboard/graphics",
+    employees: "/dashboard/equip",
+    profile: "/dashboard/profile",
+    settings: "/dashboard/settings",
+  };
 
   // Carrega os dados
   useEffect(() => {
@@ -92,7 +101,6 @@ export default function CardTest({ userId, selected }: CardItemProps) {
     setIsPopupOpen(true);
   };
 
-
   // Renderização condicional
   const renderContent = () => {
     if (loading) return <p>Carregando...</p>;
@@ -128,8 +136,11 @@ export default function CardTest({ userId, selected }: CardItemProps) {
             onSelectCategory={setSelectedCategory}
           >
             {filteredPosts.map((post: any) => (
-              <li key={post.id} >
-                {post.isActive && post.title}  {post.sellPrice && post.isActive && `— (${formatCurrency(post.sellPrice)})` }
+              <li key={post.id}>
+                {post.isActive && post.title}{" "}
+                {post.sellPrice &&
+                  post.isActive &&
+                  `— (${formatCurrency(post.sellPrice)})`}
               </li>
             ))}
           </PostItem>
@@ -175,7 +186,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
 
                     // Define a URL conforme o tipo
                     const endpoint = `/api/${selectedType}`;
-                    
+
                     // console.log("📦 Enviando para:", endpoint, body);
 
                     const res = await fetch(endpoint, {
@@ -220,9 +231,13 @@ export default function CardTest({ userId, selected }: CardItemProps) {
       <CardHeader>
         <CardTitle>{data?.name}</CardTitle>
         <CardAction>
-          <Button size="sm" variant="outline" >
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => router.push(routes[selected] || "/dashboard")}
+          >
             <ArrowRight />
-            <Link href="/equip" ></Link>
+            <Link href="/equip"></Link>
           </Button>
         </CardAction>
         <CardDescription></CardDescription>
