@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: "Usuário criado com sucesso", user })
   } catch (error) {
-    console.error(error)
+    console.error('🚨 ERRO FATAL DO PRISMA/DB NO VERCEL:', error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }
