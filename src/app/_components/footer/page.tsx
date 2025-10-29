@@ -1,20 +1,20 @@
 const FooterPage = () => {
     return ( 
-        <footer className="p-4 bg-white rounded-lg shadow md:flex md:items-center md:justify-between md:p-6 dark:bg-gray-800">
-        <span className="text-sm text-gray-500 sm:text-center dark:text-gray-400">© 2023 <a href="https://flowbite.com/" className="hover:underline">Alphawebs</a>. All Rights Reserved.
+        <footer className="w-full p-6 text-center">
+        <span className="text-sm text-gray-500 sm:text-center dark:text-gray-400 w-[300px] m-auto">© 2026 <a href="https://alphawebs.com.br/" target="_/blank" className="hover:underline">Alphawebs</a>. All Rights Reserved.
         </span>
-        <ul className="flex flex-wrap items-center mt-3 text-sm text-gray-500 dark:text-gray-400 sm:mt-0">
+        <ul className="flex gap-5 mt-4 text-sm text-gray-500 justify-evenly border-t-2 border-gray-500/50 p-6">
             <li>
-                <a href="#" className="mr-4 hover:underline md:mr-6 ">About</a>
+                <a href="\sobre" className="hover:underline md:mr-6 ">About</a>
             </li>
             <li>
-                <a href="#" className="mr-4 hover:underline md:mr-6">Privacy Policy</a>
+                <a href="\privacidade" className="hover:underline md:mr-6">Privacy Policy</a>
             </li>
             <li>
-                <a href="#" className="mr-4 hover:underline md:mr-6 ">Licensing</a>
+                <a href="\licenca" className="hover:underline md:mr-6 ">Licensing</a>
             </li>
             <li>
-                <a href="#" className="hover:underline">Contact</a>
+                <a href="\contato" className="hover:underline">Contact</a>
             </li>
         </ul>
     </footer>

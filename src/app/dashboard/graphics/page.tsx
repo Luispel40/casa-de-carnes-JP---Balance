@@ -71,12 +71,22 @@ export default function GraphicsPage() {
     );
   }, [posts, selectedCategory]);
 
-  // O filterPeriod não estava fazendo nada, apenas retornando o resultado do filter
-  // Mantenho a função, mas ela deve ser usada para atualizar um estado ou renderização.
-  // Atualmente, ela não tem um efeito visível, a menos que seja chamada e seu retorno usado.
+  
   const filterPeriod = (period: string) => {
     // Se a intenção é filtrar e retornar, a função está OK, mas sem efeito na renderização
     return posts.filter((post) => post.createdAt === period);
+  };
+
+  const handleDeletePost = async (id: string) => {
+    try {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Erro ao deletar post");
+      setPosts((prev) => prev.filter((post) => post.id !== id));
+    } catch (err) {
+      console.error("Erro ao deletar post:", err);
+    }
   };
 
   if (loading || !session) {
@@ -101,7 +111,8 @@ export default function GraphicsPage() {
   return (
     <div>
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        {/* <Calendar
+        {/* TODO: Adicionar o componente Calendar
+         <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
@@ -117,7 +128,8 @@ export default function GraphicsPage() {
               }))}
               onSelectCategory={setSelectedCategory}
             >
-              <table className="lg:min-w-lg min-w-full w-[300px] border border-gray-300 p-6 text-sm max-h-[200px] h-[200px] overflow-auto">
+              <div className="max-h-[200px] h-[200px] overflow-auto">
+                <table className="lg:min-w-lg min-w-full w-[300px] border border-gray-300 p-6 text-sm">
                 <tbody className="w-full">
                   <tr>
                     <th>Título</th>
@@ -139,7 +151,11 @@ export default function GraphicsPage() {
                         {formatCurrency(post.price)}
                       </td>
                       <td>
-                        <Button variant="ghost" size="icon-sm">
+                        <Button 
+                        variant="ghost" 
+                        size="icon-sm"
+                        onClick={() => handleDeletePost(post.id)}
+                        >
                           <Trash />
                         </Button>
                       </td>
@@ -148,6 +164,7 @@ export default function GraphicsPage() {
                 </tbody>
                 <tfoot></tfoot>
               </table>
+              </div>
             </PostItem>
           )}
           <div className="flex flex-row gap-6">
@@ -160,7 +177,7 @@ export default function GraphicsPage() {
           </div>
         </div>
       </div>
-      <FooterPage />
+      
     </div>
   );
 }
