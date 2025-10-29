@@ -7,7 +7,7 @@ interface EmployeeBody {
   role: string;
   salary: number;
   age: number;
-}
+} 
 
 export async function GET(req: NextRequest, context: any) {
   const { userId } = context.params;

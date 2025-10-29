@@ -1,13 +1,12 @@
 "use client";
 
-import { Calendar } from "@/_components/ui/calendar";
 import { EllipsisIcon, Loader, Plus, Trash } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useMemo } from "react";
 import { useEffect, useState } from "react";
 import PostItem from "../_components/post";
-import FooterPage from "@/app/_components/footer/page";
 import { Button } from "@/_components/ui/button";
+import { toast } from "sonner";
 
 // Função Helper para formatar moeda (usando Intl.NumberFormat para o Real Brasileiro)
 // Foi adicionada pois estava faltando no código original.
@@ -78,16 +77,19 @@ export default function GraphicsPage() {
   };
 
   const handleDeletePost = async (id: string) => {
-    try {
-      const res = await fetch(`/api/posts/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Erro ao deletar post");
-      setPosts((prev) => prev.filter((post) => post.id !== id));
-    } catch (err) {
-      console.error("Erro ao deletar post:", err);
-    }
-  };
+  try {
+    const res = await fetch(`/api/posts/${session?.user?.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) throw new Error("Erro ao deletar post");
+    setPosts((prev) => prev.filter((post) => post.id !== id));
+  } catch (err) {
+    toast.error("Erro ao deletar post" + err);
+  }
+  toast.success("Item deletado com sucesso!");
+};
 
   if (loading || !session) {
     return (
