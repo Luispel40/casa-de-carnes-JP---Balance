@@ -1,12 +1,13 @@
 "use client";
 
-import { EllipsisIcon, Loader, Plus, Trash } from "lucide-react";
+import { ChevronLeft, EllipsisIcon, Loader, Plus, Trash } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { useMemo } from "react";
 import { useEffect, useState } from "react";
 import PostItem from "../_components/post";
 import { Button } from "@/_components/ui/button";
 import { toast } from "sonner";
+import Link from "next/link";
 
 // Função Helper para formatar moeda (usando Intl.NumberFormat para o Real Brasileiro)
 // Foi adicionada pois estava faltando no código original.
@@ -24,7 +25,6 @@ export default function GraphicsPage() {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  // 🚨 CORREÇÃO 1: Adicionado o estado para 'categories'
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -91,6 +91,10 @@ export default function GraphicsPage() {
   toast.success("Item deletado com sucesso!");
 };
 
+const viewPost = (post: any) => {
+  console.log(post);
+};
+
   if (loading || !session) {
     return (
       <p className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -100,8 +104,7 @@ export default function GraphicsPage() {
     );
   }
 
-  // A verificação de !posts não é mais necessária se posts for inicializado como [] (array vazio).
-  // Mas uma verificação de array vazio é mais clara.
+ 
   if (posts.length === 0) {
     return (
       <p className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -120,6 +123,15 @@ export default function GraphicsPage() {
                     onSelect={setDate}
                     className="rounded-lg border"
                 /> */}
+          <div className="flex items-center gap-2 w-full sm:w-96 justify-between px-6">
+            <Button variant="outline" asChild>
+            <Link href="/dashboard">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            </Link>
+          </Button>
+
+            <h1 className="text-2xl font-bold">Graficos</h1>
+          </div>
         <div className="flex flex-col items-center justify-center min-h-96 max-h-96 gap-4 border rounded-lg p-6">
           {categories.length > 0 && (
             <PostItem
@@ -159,6 +171,13 @@ export default function GraphicsPage() {
                         onClick={() => handleDeletePost(post.id)}
                         >
                           <Trash />
+                        </Button>
+                        <Button 
+                        variant="ghost" 
+                        size="icon-sm"
+                        onClick={() => viewPost(post)}
+                        >
+                          <Plus />
                         </Button>
                       </td>
                     </tr>

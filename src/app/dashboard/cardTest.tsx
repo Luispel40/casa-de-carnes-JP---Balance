@@ -169,6 +169,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
               <option value="categories">Categoria</option>
               <option value="employees">Funcionário</option>
               <option value="posts">Item</option>
+              <option value="patterns">Padrão</option>
             </NativeSelect>
 
             <Button onClick={handleAdd} className="w-full">
