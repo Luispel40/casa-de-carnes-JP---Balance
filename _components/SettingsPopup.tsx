@@ -95,7 +95,10 @@ export default function SettingsPopup({
   const [patterns, setPatterns] = useState<any[]>([]);
   const [selectedPattern, setSelectedPattern] = useState<any | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [parts, setParts] = useState<PartPayload[]>([]);
+  const [parts, setParts] = useState<PartPayload[]>([
+  { name: "Quebra", percentage: 100, weight: 0 },
+]);
+
 
   const fields = FIELD_SCHEMAS[type] || [];
 
@@ -158,43 +161,74 @@ export default function SettingsPopup({
 
   // 🔹 Funções de manipulação de partes
   const handleAddPart = () => {
-    setParts([
-      ...parts,
-      {
-        name: "",
-        percentage: 0,
-        weight: 0,
-        price: 0,
-        sellPrice: 0,
-        isActive: true,
-      },
-    ]);
-  };
+  const usedPercent = parts
+    .filter((p) => p.name.toLowerCase() !== "quebra")
+    .reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0);
+
+  if (usedPercent >= 100) {
+    alert("A soma das partes já atingiu 100%. Diminua alguma parte antes de adicionar outra.");
+    return;
+  }
+
+  setParts([
+    ...parts.filter((p) => p.name.toLowerCase() !== "quebra"),
+    {
+      name: "",
+      percentage: 0,
+      weight: 0,
+      price: 0,
+      sellPrice: 0,
+      isActive: true,
+    },
+    { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
+  ]);
+};
+
 
   const handlePartChange = (
-    index: number,
-    field: keyof PartPayload,
-    value: string | number | boolean
-  ) => {
-    setParts((prev) =>
-      prev.map((p, i) =>
-        i === index
-          ? {
-              ...p,
-              [field]: ["percentage", "weight", "price", "sellPrice"].includes(
-                field
-              )
-                ? parseFloat(value as string)
-                : value,
-            }
-          : p
-      )
+  index: number,
+  field: keyof PartPayload,
+  value: string | number | boolean
+) => {
+  setParts((prev) => {
+    const updated = prev.map((p, i) =>
+      i === index
+        ? {
+            ...p,
+            [field]: ["percentage", "weight", "price", "sellPrice"].includes(
+              field
+            )
+              ? parseFloat(value as string)
+              : value,
+          }
+        : p
     );
-  };
+
+    const usedPercent = updated
+      .filter((p) => p.name.toLowerCase() !== "quebra")
+      .reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0);
+
+    return [
+      ...updated.filter((p) => p.name.toLowerCase() !== "quebra"),
+      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
+    ];
+  });
+};
 
   const handleRemovePart = (index: number) => {
-    setParts(parts.filter((_, i) => i !== index));
-  };
+  setParts((prev) => {
+    const filtered = prev.filter((_, i) => i !== index && _.name.toLowerCase() !== "quebra");
+    const usedPercent = filtered.reduce(
+      (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+      0
+    );
+    return [
+      ...filtered,
+      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
+    ];
+  });
+};
+
 
   // 🔹 Manipular inputs comuns
   const handleChange = (
@@ -267,31 +301,36 @@ export default function SettingsPopup({
   };
 
   const handleSubmit = () => {
-    const payload = {
-      ...formData,
-      userId,
-      parts:
-        type === "patterns"
-          ? parts.map((p) => ({
-              name: p.name,
-              percentage: p.percentage ?? 0,
-            }))
-          : parts.map((p) => ({
-              name: p.name,
-              weight: parseFloat(
-                ((formData.weight * (p.percentage ?? 0)) / 100).toFixed(2)
-              ),
-              price: p.price ?? 0,
-              sellPrice: p.sellPrice ?? 0,
-              isActive: p.isActive ?? true,
-            })),
-    };
-    console.log("📦 Payload enviado:", JSON.stringify(payload, null, 2));
+  // 🔹 Ajusta a parte "quebra" antes de enviar
+  const adjustedParts = parts.map((p) =>
+    p.name.toLowerCase().trim() === "quebra"
+      ? { ...p, sellPrice: 0 }
+      : p
+  );
 
+  // 🔹 Calcula sold incluindo a quebra
+  const quebraPart = adjustedParts.find(
+  (p) => p.name.toLowerCase().trim() === "quebra"
+);
 
-    onSubmit(payload);
-    onClose();
-  };
+// ✅ sold inicial é o atual (se houver) + o peso da quebra (apenas se estiver criando)
+const totalSold =
+  mode === "create"
+    ? (formData.sold || 0) + (quebraPart?.weight ?? 0)
+    : formData.sold || 0;
+
+const payload = {
+  ...formData,
+  sold: totalSold,
+  parts: adjustedParts,
+};
+
+console.log("📦 Payload enviado:", JSON.stringify(payload, null, 2));
+onSubmit(payload);
+onClose();
+
+};
+
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
@@ -386,63 +425,75 @@ export default function SettingsPopup({
 
           {/* Editor de partes (patterns) */}
           {type === "patterns" && (
-            <div className="space-y-2 border-t pt-3">
-              <NativeSelect
-                name="categoryId"
-                value={formData.categoryId || ""}
-                onChange={handleChange}
-              >
-                <option value="">
-                  {loadingCategories
-                    ? "Carregando..."
-                    : "Selecione uma categoria"}
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </NativeSelect>
-              <h4 className="text-sm font-medium">Partes do Padrão (%)</h4>
-              {parts.map((part, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Nome da parte"
-                    value={part.name}
-                    onChange={(e) =>
-                      handlePartChange(index, "name", e.target.value)
-                    }
-                  />
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="%"
-                    value={part.percentage}
-                    onChange={(e) =>
-                      handlePartChange(index, "percentage", e.target.value)
-                    }
-                  />
+  <div className="space-y-2 border-t pt-3">
+    <NativeSelect
+      name="categoryId"
+      value={formData.categoryId || ""}
+      onChange={handleChange}
+    >
+      <option value="">
+        {loadingCategories
+          ? "Carregando..."
+          : "Selecione uma categoria"}
+      </option>
+      {categories.map((cat) => (
+        <option key={cat.id} value={cat.id}>
+          {cat.name}
+        </option>
+      ))}
+    </NativeSelect>
 
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleRemovePart(index)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
+    <h4 className="text-sm font-medium">Partes do Padrão (%)</h4>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddPart}
-              >
-                + Adicionar Parte
-              </Button>
-            </div>
-          )}
+    {parts.map((part, index) => (
+      <div key={index} className="flex gap-2 items-center">
+        <Input
+          placeholder="Nome da parte"
+          value={part.name}
+          disabled={part.name.toLowerCase() === "quebra"}
+          onChange={(e) =>
+            handlePartChange(index, "name", e.target.value)
+          }
+        />
+        <Input
+          type="number"
+          step="0.1"
+          placeholder="%"
+          value={part.percentage}
+          disabled={part.name.toLowerCase() === "quebra"}
+          onChange={(e) =>
+            handlePartChange(index, "percentage", e.target.value)
+          }
+        />
+
+        {part.name.toLowerCase() !== "quebra" && (
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={() => handleRemovePart(index)}
+          >
+            ✕
+          </Button>
+        )}
+      </div>
+    ))}
+
+    <div className="text-sm text-muted-foreground mt-1">
+      Soma total:{" "}
+      {parts.reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0)}%
+    </div>
+
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={handleAddPart}
+    >
+      + Adicionar Parte
+    </Button>
+  </div>
+)}
+
         </CardContent>
       </Card>
     </div>

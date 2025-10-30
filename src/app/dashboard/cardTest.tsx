@@ -230,7 +230,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
   return (
     <Card className="w-96 min-h-[400px] max-h-[400px]">
       <CardHeader>
-        <CardTitle>{data?.name}</CardTitle>
+        <CardTitle>{selectedCategory}</CardTitle>
         <CardAction>
           <Button
             size="sm"

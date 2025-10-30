@@ -12,14 +12,24 @@ interface PostsBody {
   isActive?: boolean;
   categoryId?: string;
   userId: string;
-  parts?: { name: string; weight: number; price?: number; sellPrice?: number; isActive?: boolean }[];
+  parts?: {
+    name: string;
+    weight: number;
+    price?: number;
+    sellPrice?: number;
+    isActive?: boolean;
+  }[];
 }
 
 // 🟢 GET – busca posts de um usuário
 export async function GET(req: NextRequest, context: any) {
   const { userId } = context.params;
 
-  if (!userId) return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+  if (!userId)
+    return NextResponse.json(
+      { error: "userId é obrigatório" },
+      { status: 400 }
+    );
 
   try {
     const posts = await db.post.findMany({
@@ -29,7 +39,10 @@ export async function GET(req: NextRequest, context: any) {
     return NextResponse.json(posts ?? []);
   } catch (error) {
     console.error("❌ Erro ao buscar posts:", error);
-    return NextResponse.json({ error: "Erro ao buscar posts" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao buscar posts" },
+      { status: 500 }
+    );
   }
 }
 
@@ -39,13 +52,17 @@ export async function DELETE(req: NextRequest) {
     const body = await req.json();
     const { id } = body;
 
-    if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    if (!id)
+      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
 
     const deleted = await db.post.delete({ where: { id } });
     return NextResponse.json({ message: "Item deletado com sucesso", deleted });
   } catch (error) {
     console.error("❌ Erro ao deletar Item:", error);
-    return NextResponse.json({ error: "Erro ao deletar Item" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao deletar Item" },
+      { status: 500 }
+    );
   }
 }
 
@@ -53,12 +70,32 @@ export async function DELETE(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body: PostsBody = await req.json();
-    const { id, title, weight, sold, price, sellPrice, categoryId, userId, parts } = body;
+    const {
+      id,
+      title,
+      weight,
+      sold,
+      price,
+      sellPrice,
+      categoryId,
+      userId,
+      parts,
+    } = body;
 
-    if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+    if (!id)
+      return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
 
     const existing = await db.post.findUnique({ where: { id } });
-    if (!existing) return NextResponse.json({ error: "Item não encontrado" }, { status: 404 });
+    if (!existing)
+      return NextResponse.json(
+        { error: "Item não encontrado" },
+        { status: 404 }
+      );
+
+    const quebraPart = parts?.find((p) => p.name?.toLowerCase() === "quebra");
+    if (quebraPart) quebraPart.sellPrice = 0;
+
+    const totalSold = sold ?? 0 + (quebraPart?.weight ?? 0);
 
     const updated = await db.post.update({
       where: { id },
@@ -90,39 +127,61 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error("❌ Erro ao atualizar item:", error);
-    return NextResponse.json({ error: error.message || "Erro ao atualizar item" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Erro ao atualizar item" },
+      { status: 500 }
+    );
   }
 }
 
-// 🟢 POST – cria um post com parts
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, price, categoryId, sellPrice, isActive, userId, weight, parts = [] } = body;
+    const {
+      title,
+      sold,
+      price,
+      categoryId,
+      sellPrice,
+      isActive,
+      userId,
+      weight,
+      parts = [],
+    } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+    if (!userId || !title || !price || !weight) {
+      return NextResponse.json(
+        { error: "Campos obrigatórios faltando" },
+        { status: 400 }
+      );
     }
 
-    if (!title || !price || !weight) {
-      return NextResponse.json({ error: "Campos obrigatórios faltando" }, { status: 400 });
-    }
+    // 🔹 Localiza a "quebra", se existir
+    const quebraPart = parts.find(
+      (p) => p.name?.toLowerCase().trim() === "quebra"
+    );
+
+    const totalSold =
+      (sold ?? 0) +
+      (parts.find((p) => p.name?.toLowerCase() === "quebra")?.weight ?? 0);
+
+    // ajusta sellPrice da quebra
+    const adjustedParts = parts.map((p) => ({
+      ...p,
+      sellPrice:
+        p.name?.toLowerCase().trim() === "quebra" ? 0 : p.sellPrice ?? 0,
+    }));
 
     const data: any = {
       title,
-      price: parseFloat(price),
-      weight: parseFloat(weight),
-      sellPrice: parseFloat(sellPrice) || 0,
+      price: parseFloat(price as any),
+      weight: parseFloat(weight as any),
+      sellPrice: parseFloat(sellPrice as any) || 0,
+      sold: totalSold, // atualiza o sold
       isActive: isActive ?? true,
       user: { connect: { id: userId } },
       parts: {
-        create: parts.map((p: any) => ({
-          name: p.name,
-          weight: p.weight ?? 0,
-          price: p.price ?? 0,
-          sellPrice: p.sellPrice ?? 0,
-          isActive: p.isActive ?? true,
-        })),
+        create: adjustedParts, // ⚡ aqui usamos adjustedParts
       },
     };
 
