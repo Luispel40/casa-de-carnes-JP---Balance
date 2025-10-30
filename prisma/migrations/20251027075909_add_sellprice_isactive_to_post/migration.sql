@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Post" ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "sellPrice" DOUBLE PRECISION;

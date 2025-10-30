@@ -140,7 +140,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
                 {post.isActive && post.title}{" "}
                 {post.sellPrice &&
                   post.isActive &&
-                  `— (${formatCurrency(post.sellPrice)})`}
+                  `— (${(post.weight - post.sold)}kg)`}
               </li>
             ))}
           </PostItem>
@@ -165,7 +165,7 @@ export default function CardTest({ userId, selected }: CardItemProps) {
               onChange={(e) => setSelectedType(e.target.value)}
               value={selectedType}
             >
-              <option value="">Selecione um tipo</option>
+              <option value="">Selecione</option>
               <option value="categories">Categoria</option>
               <option value="employees">Funcionário</option>
               <option value="posts">Item</option>

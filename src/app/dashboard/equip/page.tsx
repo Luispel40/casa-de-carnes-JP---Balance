@@ -107,14 +107,14 @@ export default function EquipPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4 w-full">
       <div className="flex items-center gap-2 w-full sm:w-96 justify-between px-6">
-            <Button variant="outline" asChild>
-            <Link href="/dashboard">
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            </Link>
-          </Button>
+          </Link>
+        </Button>
 
-            <h1 className="text-2xl font-bold">Minha Equipe</h1>
-          </div>
+        <h1 className="text-2xl font-bold">Minha Equipe</h1>
+      </div>
       <div className="flex gap-4 h-96 overflow-auto w-[80%]">
         {loading ? (
           <p>Carregando...</p>
@@ -215,12 +215,11 @@ export default function EquipPage() {
         />
       )}
       <p>
-        Total mensal: 
-        {formatCurrency(employees
-          .reduce((acc, emp) => acc + Number(emp.salary || 0), 0)
-          )}
+        Total mensal:
+        {formatCurrency(
+          employees.reduce((acc, emp) => acc + Number(emp.salary || 0), 0)
+        )}
       </p>
-
     </div>
   );
 }
