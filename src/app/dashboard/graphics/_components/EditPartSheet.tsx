@@ -1,10 +1,27 @@
 "use client";
 import React from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/_components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/_components/ui/sheet";
 import { Button } from "@/_components/ui/button";
 import { Label } from "@/_components/ui/label";
 import { Input } from "@/_components/ui/input";
 import { DollarSign } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/_components/ui/dialog";
+import { DialogClose } from "@radix-ui/react-dialog";
+import { formatCurrency } from "@/helpers/format-currency";
 
 interface EditPartSheetProps {
   open: boolean;
@@ -37,7 +54,10 @@ export default function EditPartSheet({
           {selectedPart && (
             <SheetDescription>
               Atualmente temos{" "}
-              <strong>{selectedPart.weight - (selectedPart.sold || 0)}kg</strong> de <strong>{selectedPart.name}</strong> no estoque.
+              <strong>
+                {selectedPart.weight - (selectedPart.sold || 0)}kg
+              </strong>{" "}
+              de <strong>{selectedPart.name}</strong> no estoque.
             </SheetDescription>
           )}
         </SheetHeader>
@@ -54,20 +74,50 @@ export default function EditPartSheet({
                 max={selectedPart?.weight - (selectedPart?.sold || 0)}
               />
             </div>
-            <Button variant="outline" size="sm" className="mb-1" onClick={fillAllRemaining}>Tudo</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mb-1"
+              onClick={fillAllRemaining}
+            >
+              Tudo
+            </Button>
           </div>
 
           <div>
             <Label htmlFor="sellPrice">Preço de venda (R$)</Label>
-            <Input id="sellPrice" type="number" value={sellPrice} onChange={(e) => setSellPrice(Number(e.target.value))} />
+            <Input
+              id="sellPrice"
+              type="number"
+              value={sellPrice}
+              onChange={(e) => setSellPrice(Number(e.target.value))}
+            />
           </div>
         </div>
 
         <SheetFooter className="mt-6 flex justify-between">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleBaixa} variant="default">
-            Confirmar <DollarSign className="w-4 h-4 ml-2" />
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancelar
           </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="default">
+                Confirmar <DollarSign className="w-4 h-4 ml-2" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Você tem certeza?</DialogTitle>
+                <DialogDescription>
+                  Confirme a baixa de {soldValue}kg de {selectedPart?.name} por {formatCurrency(sellPrice)}.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogClose>
+                <Button onClick={handleBaixa}>Confirmar</Button>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+            </DialogContent>
+          </Dialog>
         </SheetFooter>
       </SheetContent>
     </Sheet>

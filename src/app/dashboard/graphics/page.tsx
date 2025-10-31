@@ -271,7 +271,8 @@ export default function GraphicsPartsPage() {
         onClick={()=>{calculateSalesData(); setOpenSalesSheet(true)}}>📊 Vendas & Lucro</Button>
 
       {/* Header */}
-      <div className="flex items-center gap-2 w-full sm:w-96 justify-between px-6">
+      <div className="flex flex-col items-center justify-center h-[400px] gap-4 border border-gray-200 p-6 rounded-xl">
+        <div className="flex items-center gap-2 w-full sm:w-96 justify-between px-6">
         <Button variant="outline" asChild><Link href="/dashboard"><ChevronLeft className="mr-2 h-4 w-4"/></Link></Button>
         <h1 className="text-2xl font-bold">Partes</h1>
       </div>
@@ -285,6 +286,7 @@ export default function GraphicsPartsPage() {
         openEditSheet={openEditSheet}
         handleDeletePart={handleDeletePart}
       />
+      </div>
 
       <Button className="mt-4" onClick={()=>setOpenPopup(true)}>+ Adicionar Item</Button>
       {openPopup && <SettingsPopup type="posts" userId={session?.user?.id||""} onClose={()=>setOpenPopup(false)} onSubmit={handleCreatePost}/>}

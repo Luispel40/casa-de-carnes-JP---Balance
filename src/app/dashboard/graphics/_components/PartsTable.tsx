@@ -33,10 +33,10 @@ export default function PartsTable({
       data={posts.map((post) => ({ id: post.id, title: post.title }))}
       onSelectCategory={setSelectedPost}
     >
-      <div className="max-h-[200px] h-[200px] overflow-auto">
+      <div className="max-h-[200px] h-[200px] overflow-auto ">
         <table className="lg:min-w-lg min-w-full w-[300px] border border-gray-300 p-6 text-sm">
           <tbody className="w-full">
-            <tr>
+            <tr className="bg-gray-200 sticky top-0">
               <th>Parte</th>
               <th>Peso</th>
               <th>Preço</th>
