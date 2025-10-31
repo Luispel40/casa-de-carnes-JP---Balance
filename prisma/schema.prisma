@@ -93,9 +93,21 @@ model Part {
   sold       Float    @default(0)
   sellPrice  Float?
   isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
   postId     String
   post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sales      Sale[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt 
+}
+
+model Sale {
+  id         String   @id @default(cuid())
+  partId     String
+  part       Part     @relation(fields: [partId], references: [id])
+  quantity   Float
+  totalPrice Float
+  profit     Float
+  createdAt  DateTime @default(now())
 }
 
 model Employee {

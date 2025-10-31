@@ -20,6 +20,7 @@ export async function PUT(req: NextRequest, { params }: any) {
     data: {
       sold: body.sold,
       sellPrice: body.sellPrice,
+      sales: body.sales,
     },
   });
 
