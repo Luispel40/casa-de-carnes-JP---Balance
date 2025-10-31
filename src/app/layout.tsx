@@ -4,6 +4,7 @@ import "./globals.css"
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import FooterPage from "./_components/footer/page";
+import { DataCacheProvider } from "_contexts/DataCacheContext";
 
 const fonte = Inter({
   subsets: ["latin"],
@@ -26,7 +27,9 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <Providers>
+          <DataCacheProvider>
           {children}
+          </DataCacheProvider>
         <FooterPage />
         </Providers>
         <Toaster />

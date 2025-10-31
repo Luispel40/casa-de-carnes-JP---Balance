@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/_components/ui/card";
+import { useDataCache } from "_contexts/DataCacheContext";
 
 const FIELD_SCHEMAS: Record<
   string,
@@ -91,14 +92,13 @@ export default function SettingsPopup({
   mode = "create",
 }: SettingsPopupProps) {
   const [formData, setFormData] = useState<any>(initialData);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [patterns, setPatterns] = useState<any[]>([]);
+  const { categories, patterns, loading, fetchCategories, fetchPatterns } =
+    useDataCache();
   const [selectedPattern, setSelectedPattern] = useState<any | null>(null);
-  const [loadingCategories, setLoadingCategories] = useState(false);
   const [parts, setParts] = useState<PartPayload[]>([
-  { name: "Quebra", percentage: 100, weight: 0 },
-]);
-
+    { name: "Quebra", percentage: 100, weight: 0 },
+  ]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   const fields = FIELD_SCHEMAS[type] || [];
 
@@ -106,129 +106,136 @@ export default function SettingsPopup({
   useEffect(() => {
     if (!userId) return;
 
-    const fetchData = async () => {
+    const loadData = async () => {
       setLoadingCategories(true);
-      try {
-        const catRes = await fetch(`/api/categories/${userId}`);
-        const cats = catRes.ok ? await catRes.json() : [];
-        setCategories(cats);
+      await fetchCategories(userId);
+      if (type === "posts") {
+        await fetchPatterns(userId);
+      }
 
-        if (type === "posts") {
-          const patRes = await fetch(`/api/patterns/${userId}`);
-          const pats = patRes.ok ? await patRes.json() : [];
-          setPatterns(pats);
+      if (type === "posts" && initialData.patternId && patterns.length > 0) {
+        const pattern = patterns.find(
+          (p: any) => p.id === initialData.patternId
+        );
+        if (pattern) {
+          setSelectedPattern(pattern);
+          setFormData((prev: any) => ({
+            ...prev,
+            title: prev.title || pattern.name,
+          }));
 
-          if (initialData.patternId) {
-            const pattern = pats.find(
-              (p: any) => p.id === initialData.patternId
-            );
-            if (pattern) {
-              setSelectedPattern(pattern);
-              setFormData((prev: any) => ({
-                ...prev,
-                title: prev.title || pattern.name,
-              }));
-
-              if (initialData.weight) {
-                const numericWeight = parseFloat(initialData.weight);
-                const generatedParts = pattern.parts.map((p: any) => ({
-                  name: p.name,
-                  percentage: p.percentage,
-                  weight: parseFloat(
-                    ((numericWeight * p.percentage) / 100).toFixed(2)
-                  ),
-                }));
-                setParts(generatedParts);
-              } else {
-                const generatedParts = pattern.parts.map((p: any) => ({
-                  name: p.name,
-                  percentage: p.percentage,
-                }));
-                setParts(generatedParts);
-              }
-            }
+          if (initialData.weight) {
+            const numericWeight = parseFloat(initialData.weight);
+            const generatedParts = pattern.parts.map((p: any) => ({
+              name: p.name,
+              percentage: p.percentage,
+              weight: parseFloat(
+                ((numericWeight * p.percentage) / 100).toFixed(2)
+              ),
+            }));
+            setParts(generatedParts);
+          } else {
+            const generatedParts = pattern.parts.map((p: any) => ({
+              name: p.name,
+              percentage: p.percentage,
+              weight: p.weight ?? 0,
+            }));
+            setParts(generatedParts);
           }
         }
-      } catch (err) {
-        console.error("Erro ao carregar categorias/padrões:", err);
-      } finally {
-        setLoadingCategories(false);
       }
+      setLoadingCategories(false);
     };
 
-    fetchData();
-  }, [type, userId, initialData]);
+    loadData();
+  }, [userId, type, initialData, patterns]);
 
   // 🔹 Funções de manipulação de partes
   const handleAddPart = () => {
-  const usedPercent = parts
-    .filter((p) => p.name.toLowerCase() !== "quebra")
-    .reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0);
+    const usedPercent = parts
+      .filter((p) => p.name.toLowerCase() !== "quebra")
+      .reduce(
+        (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+        0
+      );
 
-  if (usedPercent >= 100) {
-    alert("A soma das partes já atingiu 100%. Diminua alguma parte antes de adicionar outra.");
-    return;
-  }
+    if (usedPercent >= 100) {
+      alert(
+        "A soma das partes já atingiu 100%. Diminua alguma parte antes de adicionar outra."
+      );
+      return;
+    }
 
-  setParts([
-    ...parts.filter((p) => p.name.toLowerCase() !== "quebra"),
-    {
-      name: "",
-      percentage: 0,
-      weight: 0,
-      price: 0,
-      sellPrice: 0,
-      isActive: true,
-    },
-    { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
-  ]);
-};
-
+    setParts([
+      ...parts.filter((p) => p.name.toLowerCase() !== "quebra"),
+      {
+        name: "",
+        percentage: 0,
+        weight: 0,
+        price: 0,
+        sellPrice: 0,
+        isActive: true,
+      },
+      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
+    ]);
+  };
 
   const handlePartChange = (
-  index: number,
-  field: keyof PartPayload,
-  value: string | number | boolean
-) => {
-  setParts((prev) => {
-    const updated = prev.map((p, i) =>
-      i === index
-        ? {
-            ...p,
-            [field]: ["percentage", "weight", "price", "sellPrice"].includes(
-              field
-            )
-              ? parseFloat(value as string)
-              : value,
-          }
-        : p
-    );
+    index: number,
+    field: keyof PartPayload,
+    value: string | number | boolean
+  ) => {
+    setParts((prev) => {
+      const updated = prev.map((p, i) =>
+        i === index
+          ? {
+              ...p,
+              [field]: ["percentage", "weight", "price", "sellPrice"].includes(
+                field
+              )
+                ? parseFloat(value as string)
+                : value,
+            }
+          : p
+      );
 
-    const usedPercent = updated
-      .filter((p) => p.name.toLowerCase() !== "quebra")
-      .reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0);
+      const usedPercent = updated
+        .filter((p) => p.name.toLowerCase() !== "quebra")
+        .reduce(
+          (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+          0
+        );
 
-    return [
-      ...updated.filter((p) => p.name.toLowerCase() !== "quebra"),
-      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
-    ];
-  });
-};
+      return [
+        ...updated.filter((p) => p.name.toLowerCase() !== "quebra"),
+        {
+          name: "Quebra",
+          percentage: Math.max(0, 100 - usedPercent),
+          weight: 0,
+        },
+      ];
+    });
+  };
 
   const handleRemovePart = (index: number) => {
-  setParts((prev) => {
-    const filtered = prev.filter((_, i) => i !== index && _.name.toLowerCase() !== "quebra");
-    const usedPercent = filtered.reduce(
-      (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
-      0
-    );
-    return [
-      ...filtered,
-      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
-    ];
-  });
-};
-
+    setParts((prev) => {
+      const filtered = prev.filter(
+        (_, i) => i !== index && _.name.toLowerCase() !== "quebra"
+      );
+      const usedPercent = filtered.reduce(
+        (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+        0
+      );
+      return [
+        ...filtered,
+        {
+          name: "Quebra",
+          percentage: Math.max(0, 100 - usedPercent),
+          weight: 0,
+        },
+      ];
+    });
+  };
 
   // 🔹 Manipular inputs comuns
   const handleChange = (
@@ -267,7 +274,7 @@ export default function SettingsPopup({
         ...prev,
         patternId: undefined,
         title: "",
-        categoryId: "", 
+        categoryId: "",
         parts: [],
       }));
       return;
@@ -278,16 +285,14 @@ export default function SettingsPopup({
 
     setSelectedPattern(pattern);
 
-    // Atualiza o form com o patternId, title e categoryId do pattern
     setFormData((prev: any) => ({
       ...prev,
       patternId,
       title: pattern.name,
-      categoryId: pattern.categoryId, // herdando categoria do pattern
+      categoryId: pattern.categoryId,
     }));
 
     const numericWeight = parseFloat(formData.weight) || 0;
-    // Cria partes do post baseado nas partes do pattern
     const generatedParts = pattern.parts.map((p: any) => ({
       name: p.name,
       percentage: p.percentage,
@@ -301,36 +306,29 @@ export default function SettingsPopup({
   };
 
   const handleSubmit = () => {
-  // 🔹 Ajusta a parte "quebra" antes de enviar
-  const adjustedParts = parts.map((p) =>
-    p.name.toLowerCase().trim() === "quebra"
-      ? { ...p, sellPrice: 0 }
-      : p
-  );
+    const adjustedParts = parts.map((p) =>
+      p.name.toLowerCase().trim() === "quebra" ? { ...p, sellPrice: 0 } : p
+    );
 
-  // 🔹 Calcula sold incluindo a quebra
-  const quebraPart = adjustedParts.find(
-  (p) => p.name.toLowerCase().trim() === "quebra"
-);
+    const quebraPart = adjustedParts.find(
+      (p) => p.name.toLowerCase().trim() === "quebra"
+    );
 
-// ✅ sold inicial é o atual (se houver) + o peso da quebra (apenas se estiver criando)
-const totalSold =
-  mode === "create"
-    ? (formData.sold || 0) + (quebraPart?.weight ?? 0)
-    : formData.sold || 0;
+    const totalSold =
+      mode === "create"
+        ? (formData.sold || 0) + (quebraPart?.weight ?? 0)
+        : formData.sold || 0;
 
-const payload = {
-  ...formData,
-  sold: totalSold,
-  parts: adjustedParts,
-};
+    const payload = {
+      ...formData,
+      sold: totalSold,
+      parts: adjustedParts,
+    };
 
-console.log("📦 Payload enviado:", JSON.stringify(payload, null, 2));
-onSubmit(payload);
-onClose();
-
-};
-
+    console.log("📦 Payload enviado:", JSON.stringify(payload, null, 2));
+    onSubmit(payload);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
@@ -346,7 +344,6 @@ onClose();
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Campos dinâmicos */}
           {fields.map((field) => (
             <div key={field.name} className="flex flex-col">
               <label className="text-sm font-medium mb-1">{field.label}</label>
@@ -361,7 +358,6 @@ onClose();
             </div>
           ))}
 
-          {/* Select de categoria e padrão (posts) */}
           {type === "posts" && (
             <>
               <div className="flex flex-col">
@@ -372,8 +368,8 @@ onClose();
                   onChange={handleChange}
                 >
                   <option value="">
-                    {loadingCategories
-                      ? "Carregando..."
+                    {loading && categories.length === 0
+                      ? "Carregando categorias..."
                       : "Selecione uma categoria"}
                   </option>
                   {categories.map((cat) => (
@@ -418,82 +414,84 @@ onClose();
             </>
           )}
 
-          {/* Botão de salvar */}
           <Button className="w-full mt-4" onClick={handleSubmit}>
             {mode === "edit" ? "Salvar alterações" : "Salvar"}
           </Button>
 
-          {/* Editor de partes (patterns) */}
           {type === "patterns" && (
-  <div className="space-y-2 border-t pt-3">
-    <NativeSelect
-      name="categoryId"
-      value={formData.categoryId || ""}
-      onChange={handleChange}
-    >
-      <option value="">
-        {loadingCategories
-          ? "Carregando..."
-          : "Selecione uma categoria"}
-      </option>
-      {categories.map((cat) => (
-        <option key={cat.id} value={cat.id}>
-          {cat.name}
-        </option>
-      ))}
-    </NativeSelect>
+            <div className="space-y-2 border-t pt-3">
+              <NativeSelect
+                name="categoryId"
+                value={formData.categoryId || ""}
+                onChange={handleChange}
+              >
+                <option value="">
+                  {loadingCategories && categories.length === 0
+                    ? "Carregando categorias..."
+                    : "Selecione uma categoria"}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </NativeSelect>
 
-    <h4 className="text-sm font-medium">Partes do Padrão (%)</h4>
+              <h4 className="text-sm font-medium">Partes do Padrão (%)</h4>
 
-    {parts.map((part, index) => (
-      <div key={index} className="flex gap-2 items-center">
-        <Input
-          placeholder="Nome da parte"
-          value={part.name}
-          disabled={part.name.toLowerCase() === "quebra"}
-          onChange={(e) =>
-            handlePartChange(index, "name", e.target.value)
-          }
-        />
-        <Input
-          type="number"
-          step="0.1"
-          placeholder="%"
-          value={part.percentage}
-          disabled={part.name.toLowerCase() === "quebra"}
-          onChange={(e) =>
-            handlePartChange(index, "percentage", e.target.value)
-          }
-        />
+              {parts.map((part, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Nome da parte"
+                    value={part.name}
+                    disabled={part.name.toLowerCase() === "quebra"}
+                    onChange={(e) =>
+                      handlePartChange(index, "name", e.target.value)
+                    }
+                  />
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="%"
+                    value={part.percentage}
+                    disabled={part.name.toLowerCase() === "quebra"}
+                    onChange={(e) =>
+                      handlePartChange(index, "percentage", e.target.value)
+                    }
+                  />
 
-        {part.name.toLowerCase() !== "quebra" && (
-          <Button
-            variant="destructive"
-            size="icon"
-            onClick={() => handleRemovePart(index)}
-          >
-            ✕
-          </Button>
-        )}
-      </div>
-    ))}
+                  {part.name.toLowerCase() !== "quebra" && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleRemovePart(index)}
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </div>
+              ))}
 
-    <div className="text-sm text-muted-foreground mt-1">
-      Soma total:{" "}
-      {parts.reduce((acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0), 0)}%
-    </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Soma total:{" "}
+                {parts.reduce(
+                  (acc, p) =>
+                    acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+                  0
+                )}
+                %
+              </div>
 
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={handleAddPart}
-    >
-      + Adicionar Parte
-    </Button>
-  </div>
-)}
-
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddPart}
+              >
+                + Adicionar Parte
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

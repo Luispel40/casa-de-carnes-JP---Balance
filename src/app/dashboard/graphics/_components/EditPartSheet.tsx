@@ -113,8 +113,10 @@ export default function EditPartSheet({
                   Confirme a baixa de {soldValue}kg de {selectedPart?.name} por {formatCurrency(sellPrice)}.
                 </DialogDescription>
               </DialogHeader>
-              <DialogClose>
+              <DialogClose asChild>
                 <Button onClick={handleBaixa}>Confirmar</Button>
+              </DialogClose>
+              <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
             </DialogContent>
