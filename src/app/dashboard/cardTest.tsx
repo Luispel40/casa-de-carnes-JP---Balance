@@ -16,7 +16,6 @@ import PostItem from "./_components/post";
 import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
-import { formatCurrency } from "@/helpers/format-currency";
 import Link from "next/link";
 
 interface CardItemProps {
@@ -136,10 +135,10 @@ export default function CardTest({ userId, selected }: CardItemProps) {
             onSelectCategory={setSelectedCategory}
           >
             {filteredPosts.map((post: any) => (
-              <li key={post.id}>
-                {post.isActive && post.title}{" "}
+              <li key={post.id} className={post.isActive ? "" : "line-through"}>
+                {post.isActive && post.weight !== post.sold && post.title} 
                 {post.sellPrice &&
-                  post.isActive &&
+                  post.isActive && post.weight !== post.sold &&
                   `— (${(post.weight - post.sold)}kg)`}
               </li>
             ))}

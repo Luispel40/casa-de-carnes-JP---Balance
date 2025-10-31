@@ -91,6 +91,7 @@ export default function EditPartSheet({
               type="number"
               value={sellPrice}
               onChange={(e) => setSellPrice(Number(e.target.value))}
+              disabled
             />
           </div>
         </div>

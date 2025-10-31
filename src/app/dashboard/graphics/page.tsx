@@ -162,6 +162,23 @@ export default function GraphicsPartsPage() {
     }
   };
 
+  const handleUpdateSellPrice = async (id: string, newSellPrice: number) => {
+  try {
+    const res = await fetch(`/api/parts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sellPrice: newSellPrice }),
+    });
+
+    if (!res.ok) throw new Error("Erro ao atualizar preço");
+    toast.success("Preço atualizado com sucesso!");
+  } catch (err) {
+    console.error(err);
+    toast.error("Falha ao atualizar preço");
+  }
+};
+
+
   // Calcular vendas e lucro
   const calculateSalesData = () => {
     const now = new Date();
