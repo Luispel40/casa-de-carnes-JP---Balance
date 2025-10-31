@@ -78,12 +78,12 @@ export default function GraphicsPartsPage() {
   const filteredParts = selectedPost ? parts.filter(p => p.postId === selectedPost) : parts;
 
   // Deletar parte
-  const handleDeletePart = async (id: string) => {
+  const handleDeletePart = async (id: string, name: string) => {
     try {
       const res = await fetch(`/api/parts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erro ao deletar part");
       setParts(prev => prev.filter(p => p.id !== id));
-      toast.success("Parte deletada com sucesso!");
+      toast.success(`${name} deletado com sucesso!`);
     } catch {
       toast.error("Erro ao deletar parte");
     }
@@ -179,32 +179,84 @@ export default function GraphicsPartsPage() {
 };
 
 
-  // Calcular vendas e lucro
-  const calculateSalesData = () => {
-    const now = new Date();
-    const filtered = parts.filter(part => {
-      const createdAt = new Date(part.createdAt || now);
-      switch (salesPeriod) {
-        case "hour": { const d = new Date(now); d.setHours(now.getHours()-1); return createdAt>=d }
-        case "today": return createdAt.toDateString()===now.toDateString();
-        case "week": { const d = new Date(now); d.setDate(now.getDate()-7); return createdAt>=d }
-        case "month": return createdAt.getMonth()===now.getMonth() && createdAt.getFullYear()===now.getFullYear();
-        case "year": return createdAt.getFullYear()===now.getFullYear();
-        default: return true;
-      }
-    });
+// Calcular vendas e lucro agrupados por nome da parte
+const calculateSalesData = async () => {
+  if (!session?.user?.id) return;
 
-    const summary = filtered.reduce((acc: any, part: any) => {
-      const totalSales = (part.sold || 0) * (part.sellPrice || 0);
-      const profit = (part.sellPrice - (part.price || 0)) * (part.sold || 0);
-      const existing = acc.find((a:any)=>a.postTitle===part.postTitle);
-      if (existing) { existing.totalSales+=totalSales; existing.profit+=profit }
-      else acc.push({postTitle: part.postTitle, totalSales, profit});
-      return acc;
-    }, []);
-    summary.sort((a:any,b:any)=>b.profit-a.profit);
-    setSalesData(summary);
-  };
+  const res = await fetch(`/api/sales`);
+  if (!res.ok) throw new Error("Erro ao buscar vendas");
+  const sales = await res.json();
+  const now = new Date();
+
+  // 🔹 Filtra apenas vendas do usuário logado
+  const userSales = sales.filter((s: any) => s.userId === session.user.id);
+
+  // 🔹 Filtra pelo período selecionado
+  const filteredSales = userSales.filter((sale: any) => {
+    const createdAt = new Date(sale.createdAt);
+    switch (salesPeriod) {
+      case "hour": {
+        const d = new Date(now);
+        d.setHours(now.getHours() - 1);
+        return createdAt >= d;
+      }
+      case "today":
+        return createdAt.toDateString() === now.toDateString();
+      case "week": {
+        const d = new Date(now);
+        d.setDate(now.getDate() - 7);
+        return createdAt >= d;
+      }
+      case "month":
+        return (
+          createdAt.getMonth() === now.getMonth() &&
+          createdAt.getFullYear() === now.getFullYear()
+        );
+      case "year":
+        return createdAt.getFullYear() === now.getFullYear();
+      default:
+        return true;
+    }
+  });
+
+  // 🔹 Agrupar vendas pelo nome da parte
+  const summaryMap = new Map<
+    string,
+    { totalSales: number; profit: number; postTitle: string }
+  >();
+
+  filteredSales.forEach((sale: any) => {
+    const partName = sale.partName || "Sem nome";
+    const postTitle = sale.postTitle || "Sem título";
+    const totalPrice = sale.totalPrice || 0;
+    const profit = sale.profit || 0;
+
+    if (summaryMap.has(partName)) {
+      const existing = summaryMap.get(partName)!;
+      summaryMap.set(partName, {
+        totalSales: existing.totalSales + totalPrice,
+        profit: existing.profit + profit,
+        postTitle,
+      });
+    } else {
+      summaryMap.set(partName, { totalSales: totalPrice, profit, postTitle });
+    }
+  });
+
+  // 🔹 Converter o mapa em array e ordenar pelo lucro
+  const summary = Array.from(summaryMap.entries()).map(([partName, data]) => ({
+    partName,
+    totalSales: data.totalSales,
+    profit: data.profit,
+    postTitle: data.postTitle,
+  }));
+
+  summary.sort((a, b) => b.profit - a.profit);
+
+  setSalesData(summary);
+};
+
+
 
   // Buscar dados do gráfico
   const fetchSalesChart = async () => {
@@ -215,6 +267,7 @@ export default function GraphicsPartsPage() {
 
     const now = new Date();
 
+    // 🔹 Filtra pelo período selecionado
     const filtered = sales.filter((s: any) => {
       const createdAt = new Date(s.createdAt);
       switch (salesPeriod) {
@@ -242,29 +295,26 @@ export default function GraphicsPartsPage() {
       }
     });
 
-    // ✅ Aqui sim criamos a summary fora do reduce e ordenamos depois
-    const summary = filtered.reduce((acc: any, s: any) => {
-      const existing = acc.find((a: any) => a.partName === s.partName);
-      if (existing) {
-        existing.totalSales += s.totalPrice;
-        existing.profit += s.profit;
-      } else {
-        acc.push({
-          partName: s.partName,
-          totalSales: s.totalPrice,
-          profit: s.profit,
-        });
-      }
-      return acc;
-    }, []);
+    // 🔹 Mapeia cada venda individualmente
+    const mapped = filtered.map((s: any) => ({
+      partName: s.partName || "Desconhecida",
+      totalSales: s.totalPrice,
+      profit: s.profit,
+      createdAt: new Date(s.createdAt).toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
 
-    summary.sort((a: any, b: any) => b.profit - a.profit);
-    setChartData(summary);
+    setChartData(mapped);
   } catch (err) {
     console.error("Erro ao carregar gráfico de vendas:", err);
     toast.error("Erro ao carregar dados de vendas");
   }
 };
+
 
 
   if(loading||!session) return (

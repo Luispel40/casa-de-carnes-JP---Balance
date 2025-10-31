@@ -12,6 +12,15 @@ import {
 import { Input } from "@/_components/ui/input";
 import { Label } from "@/_components/ui/label";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/_components/ui/dialog";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 interface PartsTableProps {
   posts: any[];
@@ -19,7 +28,7 @@ interface PartsTableProps {
   selectedPost: string;
   setSelectedPost: (id: string) => void;
   openEditSheet: (part: any) => void;
-  handleDeletePart: (id: string) => void;
+  handleDeletePart: (id: string, name: string) => void;
   handleUpdateSellPrice?: (id: string, newSellPrice: number) => void;
 }
 
@@ -86,7 +95,6 @@ export default function PartsTable({
               <th>item</th>
               <th>quant..</th>
               <th>Preço</th>
-              <th>cat</th>
               <th>Ações</th>
             </tr>
 
@@ -100,16 +108,32 @@ export default function PartsTable({
                 <td className="p-2 border-r">
                   {formatCurrency(part.sellPrice)}
                 </td>
-                <td className="p-2 border-r">{part.postTitle}</td>
                 <td className="p-2 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleDeletePart(part.id)}
-                    disabled={part.sold === part.weight}
-                  >
-                    <Trash />
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon-sm">
+                        <Trash />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          Você deseja deletar esse item?
+                        </DialogTitle>
+                        <DialogDescription>
+                          Essa mudança será irreversível.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogClose asChild>
+                        <Button onClick={() => handleDeletePart(part.id, part.name)}>
+                          Deletar
+                        </Button>
+                      </DialogClose>
+                      <DialogClose asChild>
+                        <Button variant="ghost">Cancelar</Button>
+                      </DialogClose>
+                    </DialogContent>
+                  </Dialog>
 
                   <Button
                     variant="ghost"

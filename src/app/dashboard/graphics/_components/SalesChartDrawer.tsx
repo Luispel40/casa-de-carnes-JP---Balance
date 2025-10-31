@@ -1,9 +1,25 @@
 "use client";
 import React from "react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from "@/_components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from "@/_components/ui/drawer";
 import { Button } from "@/_components/ui/button";
 import { NativeSelect } from "@/_components/ui/native-select";
-import { BarChart, Bar, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 
 interface SalesChartDrawerProps {
   open: boolean;
@@ -14,19 +30,60 @@ interface SalesChartDrawerProps {
   fetchSalesChart: () => void;
 }
 
-export default function SalesChartDrawer({ open, setOpen, chartData, salesPeriod, setSalesPeriod, fetchSalesChart }: SalesChartDrawerProps) {
+export default function SalesChartDrawer({
+  open,
+  setOpen,
+  chartData,
+  salesPeriod,
+  setSalesPeriod,
+  fetchSalesChart,
+}: SalesChartDrawerProps) {
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0]?.payload;
+      return (
+        <div className="bg-white shadow-lg rounded-lg p-3 border border-gray-200">
+          <p className="font-semibold">{item.partName}</p>
+          <p className="text-sm text-gray-600">
+            Total:{" "}
+            <span className="font-medium">
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(item.totalSales)}
+            </span>
+          </p>
+          <p className="text-sm text-gray-600">
+            Lucro:{" "}
+            <span className="font-medium text-green-600">
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(item.profit)}
+            </span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">{item.createdAt}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerContent className="p-6">
         <DrawerHeader>
-          <DrawerTitle>📈 Margem de Lucro por Parte</DrawerTitle>
+          <DrawerTitle>📈 Estatísticas de Vendas</DrawerTitle>
           <DrawerDescription>
-            Vendas agrupadas por nome da parte conforme o período selecionado.
+            Cada barra representa uma venda individual.
           </DrawerDescription>
         </DrawerHeader>
 
         <div className="mb-4">
-          <NativeSelect value={salesPeriod} onChange={(e) => setSalesPeriod(e.target.value as any)}>
+          <NativeSelect
+            value={salesPeriod}
+            onChange={(e) => setSalesPeriod(e.target.value as any)}
+          >
             <option value="hour">Última hora</option>
             <option value="today">Hoje</option>
             <option value="week">Esta semana</option>
@@ -34,7 +91,9 @@ export default function SalesChartDrawer({ open, setOpen, chartData, salesPeriod
             <option value="year">Este ano</option>
             <option value="ever">Todo período</option>
           </NativeSelect>
-          <Button className="mt-2 w-full" onClick={fetchSalesChart}>Atualizar Gráfico</Button>
+          <Button className="mt-2 w-full" onClick={fetchSalesChart}>
+            Atualizar Gráfico
+          </Button>
         </div>
 
         {chartData.length > 0 ? (
@@ -42,16 +101,19 @@ export default function SalesChartDrawer({ open, setOpen, chartData, salesPeriod
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="partName" />
+                {/* 🔹 Mostra a data/hora no eixo X */}
+                <XAxis dataKey="createdAt" tick={{ fontSize: 10 }} />
                 <YAxis />
-                <Tooltip formatter={(value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)} />
-                <Bar dataKey="totalSales" name="Total de Vendas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="profit" name="Lucro" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="totalSales" name="Total" fill="#3b82f6" />
+                <Bar dataKey="profit" name="Lucro" fill="#16a34a" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <p className="text-center text-gray-500 mt-4">Nenhuma venda encontrada para este período.</p>
+          <p className="text-center text-gray-500 mt-4">
+            Nenhuma venda encontrada para este período.
+          </p>
         )}
 
         <DrawerFooter className="mt-4">

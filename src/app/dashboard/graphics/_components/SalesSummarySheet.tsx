@@ -36,23 +36,43 @@ export default function SalesSummarySheet({ open, setOpen, salesPeriod, setSales
         </div>
 
         <table className="w-full border border-gray-300 text-sm rounded-md">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="p-2 border-r">Post</th>
-              <th className="p-2 border-r">Total vendas</th>
-              <th className="p-2 border-r">Lucro</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesData.map((s, i) => (
-              <tr key={i}>
-                <td className="p-2 border-r">{s.postTitle}</td>
-                <td className="p-2 border-r">{formatCurrency(s.totalSales)}</td>
-                <td className="p-2 border-r">{formatCurrency(s.profit)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  <thead className="bg-gray-200">
+    <tr>
+      <th className="p-2 border-r text-left">item</th>
+      <th className="p-2 border-r text-left">de</th>
+      <th className="p-2 border-r text-right">Total vendas</th>
+      <th className="p-2 text-right">Lucro</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {salesData.length === 0 ? (
+      <tr>
+        <td colSpan={4} className="p-4 text-center text-gray-500">
+          Nenhum resultado encontrado para este período.
+        </td>
+      </tr>
+    ) : (
+      salesData.map((s, i) => (
+        <tr key={i} className="hover:bg-gray-100 transition">
+          <td className="p-2 border-r">{s.partName}</td>
+          <td className="p-2 border-r text-gray-600">{s.postTitle}</td>
+          <td className="p-2 border-r text-right font-medium">
+            {formatCurrency(s.totalSales)}
+          </td>
+          <td
+            className={`p-2 text-right font-semibold ${
+              s.profit >= 0 ? "text-green-600" : "text-red-500"
+            }`}
+          >
+            {formatCurrency(s.profit)}
+          </td>
+        </tr>
+      ))
+    )}
+  </tbody>
+</table>
+
 
         <SheetFooter className="mt-4 flex justify-end">
           <Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button>

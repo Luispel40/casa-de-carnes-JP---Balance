@@ -56,3 +56,4 @@ export async function PATCH(req: NextRequest, { params }: any) {
     return NextResponse.json({ error: "Erro ao atualizar parte" }, { status: 500 });
   }
 }
+
