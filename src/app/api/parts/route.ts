@@ -33,13 +33,20 @@ export async function GET(req: NextRequest) {
     const parts = await db.part.findMany({
       include: {
         post: {
-          select: { title: true },
+          select: { id: true, title: true, userId: true }, // 🔹 incluir userId
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(parts);
+    // Mapear para trazer userId direto no objeto
+    const mappedParts = parts.map((part) => ({
+      ...part,
+      userId: part.post.userId,
+      postTitle: part.post.title,
+    }));
+
+    return NextResponse.json(mappedParts);
   } catch (error) {
     console.error("Erro ao buscar partes:", error);
     return NextResponse.json({ error: "Erro ao buscar partes" }, { status: 500 });

@@ -16,7 +16,6 @@ import PostItem from "./_components/post";
 import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
-import { formatCurrency } from "@/helpers/format-currency";
 import Link from "next/link";
 
 interface CardItemProps {
@@ -136,11 +135,11 @@ export default function CardItem({ userId, selected }: CardItemProps) {
             onSelectCategory={setSelectedCategory}
           >
             {filteredPosts.map((post: any) => (
-              <li key={post.id}>
-                {post.isActive && post.title}{" "}
+              <li key={post.id} className={post.isActive ? "" : "line-through"}>
+                {post.isActive && post.weight !== post.sold && post.title} 
                 {post.sellPrice &&
-                  post.isActive &&
-                  `— (${formatCurrency(post.sellPrice)})`}
+                  post.isActive && post.weight !== post.sold &&
+                  `— (${(post.weight - post.sold)}kg)`}
               </li>
             ))}
           </PostItem>
@@ -165,7 +164,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
               onChange={(e) => setSelectedType(e.target.value)}
               value={selectedType}
             >
-              <option value="">Selecione um tipo</option>
+              <option value="">Selecione</option>
               <option value="categories">Categoria</option>
               <option value="employees">Funcionário</option>
               <option value="posts">Item</option>
@@ -230,7 +229,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
   return (
     <Card className="w-96 min-h-[400px] max-h-[400px]">
       <CardHeader>
-        <CardTitle>{data?.name}</CardTitle>
+        <CardTitle>{selectedCategory}</CardTitle>
         <CardAction>
           <Button
             size="sm"

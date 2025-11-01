@@ -1,11 +1,16 @@
 "use client";
+
 import React, { useMemo, useState } from "react";
 import { Button } from "@/_components/ui/button";
-import { Trash, Edit, DollarSign } from "lucide-react";
-import PostItem from "../../_components/post";
-import { formatCurrency } from "@/helpers/format-currency";
+import {
+  Trash,
+  Edit,
+  DollarSign,
+  ChevronsUpDown,
+  Check,
+  X,
+} from "lucide-react";
 import { Input } from "@/_components/ui/input";
-import { Label } from "@/_components/ui/label";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,35 +18,45 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from "@/_components/ui/dialog";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/_components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/_components/ui/command";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/helpers/format-currency";
 
 interface PartsTableProps {
-  posts: any[];
+  userId: string;
   parts: any[];
-  selectedPost: string;
-  setSelectedPost: (id: string) => void;
-  handleOpenEditSheet : (part: any) => void;
+  posts: any[];
+  handleOpenEditSheet: (part: any) => void;
   handleDeletePart: (id: string, name: string) => void;
   handleUpdateSellPrice?: (id: string, newSellPrice: number) => void;
+  selectedPost: string
+  setSelectedPost: React.Dispatch<React.SetStateAction<string>>
 }
 
 export default function PartsTable({
-  posts,
+  userId,
   parts,
-  selectedPost,
-  setSelectedPost,
-  handleOpenEditSheet ,
+  handleOpenEditSheet,
   handleDeletePart,
   handleUpdateSellPrice,
 }: PartsTableProps) {
+  const [selectedPart, setSelectedPart] = useState<string>("");
+  const [openCombo, setOpenCombo] = useState(false);
   const [percentages, setPercentages] = useState<{ [key: string]: string }>({});
   const [reductionValues, setReductionValues] = useState<{
     [key: string]: { name: string; weight: string; percent?: string };
@@ -51,12 +66,67 @@ export default function PartsTable({
     type: "adjust" | "reduce" | null;
   }>({ id: null, type: null });
 
-  const filteredParts = useMemo(() => {
+  // 🔹 Agrupar as partes do usuário logado
+  const groupedParts = useMemo(() => {
     if (!Array.isArray(parts)) return [];
-    if (!selectedPost) return parts;
-    return parts.filter((part) => part.postId === selectedPost);
-  }, [parts, selectedPost]);
 
+    const userParts = parts.filter(
+      (p) =>
+        p.userId === userId &&
+        p.name.toLowerCase() !== "quebra" &&
+        p.weight - (p.sold || 0) > 0
+    );
+
+    const groups: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        totalWeight: number;
+        totalSold: number;
+        sellPrice: number;
+        price: number;
+        postId: string;
+        isActive: boolean;
+      }
+    > = {};
+
+    for (const part of userParts) {
+      const key = part.name.trim().toLowerCase();
+      if (!groups[key]) {
+        groups[key] = {
+          id: part.id,
+          name: part.name,
+          totalWeight: part.weight,
+          totalSold: part.sold || 0,
+          sellPrice: part.sellPrice || 0,
+          price: part.price || 0,
+          postId: part.postId,
+          isActive: part.isActive,
+        };
+      } else {
+        groups[key].totalWeight += part.weight;
+        groups[key].totalSold += part.sold || 0;
+        if (part.sellPrice > groups[key].sellPrice)
+          groups[key].sellPrice = part.sellPrice;
+      }
+    }
+
+    return Object.values(groups).filter((g) => g.totalWeight - g.totalSold > 0);
+  }, [parts, userId]);
+
+  // 🔹 Combobox de nomes únicos
+  const uniqueNames = useMemo(() => {
+    return groupedParts.map((g) => ({ id: g.id, name: g.name }));
+  }, [groupedParts]);
+
+  // 🔹 Filtro por seleção
+  const filteredParts = useMemo(() => {
+    if (!selectedPart) return groupedParts;
+    return groupedParts.filter((p) => p.name === selectedPart);
+  }, [selectedPart, groupedParts]);
+
+  // 🔹 Ajuste de preço (%)
   const handlePercentageChange = (id: string, value: string) => {
     setPercentages((prev) => ({ ...prev, [id]: value }));
   };
@@ -78,13 +148,27 @@ export default function PartsTable({
       });
 
       if (!res.ok) throw new Error("Erro ao atualizar preço");
-      toast.success(`${part.name}: preço atualizado para ${formatCurrency(newSellPrice)}`);
+      toast.success(
+        `${part.name}: preço atualizado para ${formatCurrency(newSellPrice)}`
+      );
       handleUpdateSellPrice?.(part.id, newSellPrice);
       setOpenDialog({ id: null, type: null });
     } catch (err) {
       console.error(err);
       toast.error("Erro ao atualizar preço de venda");
     }
+  };
+
+  // 🔹 Redução de parte
+  const handleReductionChange = (
+    id: string,
+    field: "name" | "weight" | "percent",
+    value: string
+  ) => {
+    setReductionValues((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: value },
+    }));
   };
 
   const handleConfirmReduction = async (part: any) => {
@@ -102,7 +186,7 @@ export default function PartsTable({
       return;
     }
 
-    const available = part.weight - (part.sold || 0);
+    const available = part.totalWeight - part.totalSold;
     if (weightToReduce >= available) {
       toast.error("Peso de redução maior ou igual ao disponível!");
       return;
@@ -136,7 +220,7 @@ export default function PartsTable({
         return;
       }
 
-      const updatedWeight = part.weight - weightToReduce;
+      const updatedWeight = part.totalWeight - weightToReduce;
       const patchRes = await fetch(`/api/parts/${part.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -145,12 +229,16 @@ export default function PartsTable({
 
       if (!patchRes.ok) {
         const text = await patchRes.text().catch(() => "");
-        toast.error(`Erro ao atualizar parte original: ${patchRes.status} ${text}`);
+        toast.error(
+          `Erro ao atualizar parte original: ${patchRes.status} ${text}`
+        );
         return;
       }
 
       toast.success(
-        `Parte "${part.name}" reduzida. Nova parte "${reduction.name}" criada (${weightToReduce}kg, ${percent || 0}% sobre preço de venda).`
+        `Parte "${part.name}" reduzida. Nova parte "${
+          reduction.name
+        }" criada (${weightToReduce}kg, ${percent || 0}% sobre preço de venda).`
       );
 
       setReductionValues((prev) => ({
@@ -160,44 +248,87 @@ export default function PartsTable({
       setOpenDialog({ id: null, type: null });
     } catch (err) {
       console.error("Erro no handleConfirmReduction:", err);
-      toast.error("Erro inesperado ao reduzir parte. Veja console para detalhes.");
+      toast.error(
+        "Erro inesperado ao reduzir parte. Veja console para detalhes."
+      );
     }
   };
 
-  const handleReductionChange = (
-    id: string,
-    field: "name" | "weight" | "percent",
-    value: string
-  ) => {
-    setReductionValues((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value },
-    }));
-  };
-
   return (
-    <PostItem
-      data={posts.map((post) => ({ id: post.id, title: post.title }))}
-      onSelectCategory={setSelectedPost}
-    >
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        {/* 🔹 Combobox de seleção */}
+        <Popover open={openCombo} onOpenChange={setOpenCombo}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between"
+            >
+              {selectedPart || "Selecione um produto"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Buscar parte..." />
+              <CommandEmpty>Nenhuma parte encontrada.</CommandEmpty>
+              <CommandGroup>
+                {uniqueNames.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={item.name}
+                    onSelect={() => {
+                      setSelectedPart(item.name);
+                      setOpenCombo(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedPart === item.name ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {item.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        {selectedPart && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedPart("")}
+            className="flex items-center gap-1 text-sm"
+          >
+            <X className="w-4 h-4" /> Limpar
+          </Button>
+        )}
+      </div>
+
+      {/* 🔹 Tabela */}
       <div className="max-h-[200px] h-[200px] overflow-auto">
-        <table className="lg:min-w-lg min-w-full w-[300px] border border-gray-300 p-6 text-sm">
-          <tbody className="w-full">
+        <table className="min-w-full border border-gray-300 text-sm">
+          <tbody>
             <tr className="bg-gray-200 sticky top-0">
-              <th>item</th>
-              <th>quant..</th>
+              <th>Item</th>
+              <th>Quant.</th>
               <th>Preço</th>
               <th>Ações</th>
             </tr>
 
-            {filteredParts.map((part: any) => (
-              <tr key={part.id} className={part.sold === part.weight ? "hidden" : ""}>
+            {filteredParts.map((part) => (
+              <tr key={part.id}>
                 <td className="p-2 border-r">{part.name}</td>
                 <td className="p-2 border-r">
-                  {part.weight - (part.sold || 0)}kg
+                  {(part.totalWeight - part.totalSold).toFixed(2)}kg
                 </td>
-                <td className="p-2 border-r">{formatCurrency(part.sellPrice)}</td>
-
+                <td className="p-2 border-r">
+                  {formatCurrency(part.sellPrice)}
+                </td>
                 <td className="p-2 flex gap-2 items-start">
                   {/* Excluir */}
                   <Dialog>
@@ -214,7 +345,9 @@ export default function PartsTable({
                         </DialogDescription>
                       </DialogHeader>
                       <DialogFooter>
-                        <Button onClick={() => handleDeletePart(part.id, part.name)}>
+                        <Button
+                          onClick={() => handleDeletePart(part.id, part.name)}
+                        >
                           Deletar
                         </Button>
                         <DialogClose asChild>
@@ -228,7 +361,7 @@ export default function PartsTable({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => handleOpenEditSheet (part)}
+                    onClick={() => handleOpenEditSheet(part)}
                   >
                     <DollarSign />
                   </Button>
@@ -245,135 +378,170 @@ export default function PartsTable({
                       <Button
                         variant="outline"
                         className="w-full"
-                        onClick={() => setOpenDialog({ id: part.id, type: "adjust" })}
+                        onClick={() =>
+                          setOpenDialog({ id: part.id, type: "adjust" })
+                        }
                       >
                         Ajustar preço
                       </Button>
                       <Button
                         variant="outline"
                         className="w-full"
-                        onClick={() => setOpenDialog({ id: part.id, type: "reduce" })}
+                        onClick={() =>
+                          setOpenDialog({ id: part.id, type: "reduce" })
+                        }
                       >
                         Reduzir
                       </Button>
                     </PopoverContent>
                   </Popover>
 
-                  {/* Dialog Ajustar */}
-                  {openDialog.id === part.id && openDialog.type === "adjust" && (
-                    <Dialog open onOpenChange={() => setOpenDialog({ id: null, type: null })}>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Ajustar preço (%)</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <Input
-                            type="number"
-                            value={percentages[part.id] || ""}
-                            placeholder="Ex: 10 para +10%"
-                            onChange={(e) =>
-                              handlePercentageChange(part.id, e.target.value)
-                            }
-                          />
-                          <p className="text-xs text-gray-500">
-                            Base: {formatCurrency(part.price)}
-                            <br />
-                            Novo:{" "}
-                            <span className="font-semibold">
-                              {formatCurrency(
-                                part.price +
-                                  (part.price *
-                                    (parseFloat(percentages[part.id]) || 0)) /
-                                    100
-                              )}
-                            </span>
-                          </p>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={() => handleConfirmPriceUpdate(part)}>
-                            Confirmar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setOpenDialog({ id: null, type: null })}
-                          >
-                            Voltar
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                  {/* Dialogs */}
+                  {openDialog.id === part.id &&
+                    openDialog.type === "adjust" && (
+                      <Dialog
+                        open
+                        onOpenChange={() =>
+                          setOpenDialog({ id: null, type: null })
+                        }
+                      >
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Ajustar preço (%)</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <Input
+                              type="number"
+                              value={percentages[part.id] || ""}
+                              placeholder="Ex: 10 para +10%"
+                              onChange={(e) =>
+                                handlePercentageChange(part.id, e.target.value)
+                              }
+                            />
+                            <p className="text-xs text-gray-500">
+                              Base: {formatCurrency(part.price)}
+                              <br />
+                              Novo:{" "}
+                              <span className="font-semibold">
+                                {formatCurrency(
+                                  part.price +
+                                    (part.price *
+                                      (parseFloat(percentages[part.id]) || 0)) /
+                                      100
+                                )}
+                              </span>
+                            </p>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              onClick={() => handleConfirmPriceUpdate(part)}
+                            >
+                              Confirmar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                setOpenDialog({ id: null, type: null })
+                              }
+                            >
+                              Voltar
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
 
-                  {/* Dialog Reduzir */}
-                  {openDialog.id === part.id && openDialog.type === "reduce" && (
-                    <Dialog open onOpenChange={() => setOpenDialog({ id: null, type: null })}>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Nova parte (redução)</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <Input
-                            placeholder="Nome da nova parte"
-                            value={reductionValues[part.id]?.name || ""}
-                            onChange={(e) =>
-                              handleReductionChange(part.id, "name", e.target.value)
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Peso a reduzir (kg)"
-                            value={reductionValues[part.id]?.weight || ""}
-                            onChange={(e) =>
-                              handleReductionChange(part.id, "weight", e.target.value)
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="% sobre preço de venda (ex: 10 para +10%)"
-                            value={reductionValues[part.id]?.percent || ""}
-                            onChange={(e) =>
-                              handleReductionChange(part.id, "percent", e.target.value)
-                            }
-                          />
-
-                          <p className="text-xs text-gray-500">
-                            Peso disponível: {part.weight - (part.sold || 0)}kg
-                            <br />
-                            Preço atual: {formatCurrency(part.sellPrice)}
-                            <br />
-                            Novo preço:{" "}
-                            <span className="font-semibold">
-                              {formatCurrency(
-                                part.sellPrice +
-                                  (part.sellPrice *
-                                    (parseFloat(
-                                      reductionValues[part.id]?.percent || "0"
-                                    ))) /
-                                    100
-                              )}
-                            </span>
-                          </p>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={() => handleConfirmReduction(part)}>
-                            Confirmar Redução
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setOpenDialog({ id: null, type: null })}
-                          >
-                            Voltar
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                  {openDialog.id === part.id &&
+                    openDialog.type === "reduce" && (
+                      <Dialog
+                        open
+                        onOpenChange={() =>
+                          setOpenDialog({ id: null, type: null })
+                        }
+                      >
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Nova parte (redução)</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <Input
+                              placeholder="Nome da nova parte"
+                              value={reductionValues[part.id]?.name || ""}
+                              onChange={(e) =>
+                                handleReductionChange(
+                                  part.id,
+                                  "name",
+                                  e.target.value
+                                )
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Peso a reduzir (kg)"
+                              value={reductionValues[part.id]?.weight || ""}
+                              onChange={(e) =>
+                                handleReductionChange(
+                                  part.id,
+                                  "weight",
+                                  e.target.value
+                                )
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="% sobre preço de venda (ex: 10 para +10%)"
+                              value={reductionValues[part.id]?.percent || ""}
+                              onChange={(e) =>
+                                handleReductionChange(
+                                  part.id,
+                                  "percent",
+                                  e.target.value
+                                )
+                              }
+                            />
+                            <p className="text-xs text-gray-500">
+                              Peso disponível:{" "}
+                              {(part.totalWeight - part.totalSold).toFixed(2)}kg
+                              <br />
+                              Preço atual: {formatCurrency(part.sellPrice)}
+                              <br />
+                              Novo preço:{" "}
+                              <span className="font-semibold">
+                                {formatCurrency(
+                                  part.sellPrice +
+                                    (part.sellPrice *
+                                      parseFloat(
+                                        reductionValues[part.id]?.percent || "0"
+                                      )) /
+                                      100
+                                )}
+                              </span>
+                            </p>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              onClick={() => handleConfirmReduction(part)}
+                            >
+                              Confirmar Redução
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                setOpenDialog({ id: null, type: null })
+                              }
+                            >
+                              Voltar
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </PostItem>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/_components/ui/button";
@@ -16,13 +16,6 @@ import { playSound } from "utils/play-sound";
 import SaleNotesSheet from "./_components/SaleNotesSheet";
 
 // Helper
-const formatCurrency = (amount: number) => {
-  if (typeof amount !== "number") return "";
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(amount);
-};
 
 export default function GraphicsPartsPage() {
   const { data: session } = useSession();
@@ -74,6 +67,7 @@ export default function GraphicsPartsPage() {
               postTitle: post.title,
               postId: post.id,
               postSold: post.sold || 0,
+              userId
             })) || []
         );
         setParts(allParts);
@@ -87,9 +81,6 @@ export default function GraphicsPartsPage() {
   }, [session]);
 
   // Filtrar partes por post
-  const filteredParts = selectedPost
-    ? parts.filter((p) => p.postId === selectedPost)
-    : parts;
 
   // Deletar parte
   const handleDeletePart = async (id: string, name: string) => {
@@ -112,15 +103,6 @@ export default function GraphicsPartsPage() {
     setOpenEditSheet(true);
   };
 
-  const fillAllRemaining = (index: number) => {
-    setSoldParts((prev) => {
-      const updated = [...prev];
-      const item = updated[index];
-      if (!item) return updated;
-      item.soldValue = item.part.weight - (item.part.sold || 0);
-      return updated;
-    });
-  };
 
   const handleBaixa = async () => {
     if (soldParts.length === 0) {
@@ -153,6 +135,7 @@ export default function GraphicsPartsPage() {
           body: JSON.stringify({
             sold: (part.sold || 0) + soldValue,
             sellPrice,
+            userId
           }),
         });
         if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
@@ -169,6 +152,7 @@ export default function GraphicsPartsPage() {
             quantity: soldValue,
             totalPrice,
             profit,
+            userId
           }),
         });
 
@@ -178,6 +162,7 @@ export default function GraphicsPartsPage() {
           body: JSON.stringify({
             id: part.postId,
             sold: (part.postSold || 0) + soldValue,
+            userId
           }),
         });
 
@@ -222,21 +207,6 @@ export default function GraphicsPartsPage() {
     }
   };
 
-  const handleUpdateSellPrice = async (id: string, newSellPrice: number) => {
-    try {
-      const res = await fetch(`/api/parts/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sellPrice: newSellPrice }),
-      });
-
-      if (!res.ok) throw new Error("Erro ao atualizar preço");
-      toast.success("Preço atualizado com sucesso!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Falha ao atualizar preço");
-    }
-  };
 
   // Calcular vendas e lucro agrupados por nome da parte
   const calculateSalesData = async () => {
@@ -373,22 +343,25 @@ export default function GraphicsPartsPage() {
       toast.error("Erro ao carregar dados de vendas");
     }
   };
+  const userId = session?.user?.id;
+
+  if (!userId) return <p>Carregando ou não autenticado...</p>;
 
   if (loading || !session)
     return (
-      <p className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p className="flex flex-col items-center justify-center min-h-[350px] gap-4">
         <Loader className="animate-spin" /> Carregando...
       </p>
     );
   if (parts.length === 0)
     return (
-      <p className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p className="flex flex-col items-center justify-center min-h-[350px] gap-4">
         Nenhuma parte encontrada.
       </p>
     );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center min-h-[350px] gap-4">
       <Button
         className="group fixed bottom-16 right-6 flex items-center gap-2 rounded-full bg-green-600 text-white shadow-xl transition-all duration-300 hover:pr-6"
         onClick={() => {
@@ -416,25 +389,28 @@ export default function GraphicsPartsPage() {
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col items-center justify-center h-[400px] gap-4 border border-gray-200 p-6 rounded-xl">
-        <div className="flex items-center gap-2 w-full sm:w-96 justify-between px-6">
+      <div className="flex flex-col items-center justify-center h-[400px] gap-4 border border-gray-200 rounded-xl w-full sm:w-[600px] p-2">
+        <div className="flex items-center gap-2 w-full justify-between">
           <Button variant="outline" asChild>
             <Link href="/dashboard">
               <ChevronLeft className="mr-2 h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">Partes</h1>
+          <h1 className="text-2xl font-bold">Produtos</h1>
         </div>
 
         {/* Tabela de partes */}
         <PartsTable
-          posts={posts}
+          userId={userId} // ✅ necessário
           parts={parts}
-          selectedPost={selectedPost}
-          setSelectedPost={setSelectedPost}
           handleOpenEditSheet={handleOpenEditSheet}
-          handleDeletePart={handleDeletePart}
-        />
+          handleDeletePart={handleDeletePart} 
+          posts={[]} 
+          selectedPost={""} 
+          setSelectedPost={function (): void {
+            throw new Error("Function not implemented.");
+          } }/>
+
       </div>
 
       <div className="flex gap-2 mt-4">

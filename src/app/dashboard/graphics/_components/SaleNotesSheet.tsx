@@ -3,8 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/_components/ui/sheet";
 import { Button } from "@/_components/ui/button";
-import { Loader } from "lucide-react";
+import { Loader, FileDown } from "lucide-react";
 import { toast } from "sonner";
+
+// Função para gerar PDF simples
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function SaleNotesSheet({ open, setOpen, userId }: any) {
   const [notes, setNotes] = useState<any[]>([]);
@@ -30,6 +34,33 @@ export default function SaleNotesSheet({ open, setOpen, userId }: any) {
     if (open) fetchNotes();
   }, [open]);
 
+  const handleDownloadPDF = (note: any) => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Nota de Venda #${note.id.slice(0, 6)}`, 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Data: ${new Date(note.createdAt).toLocaleString("pt-BR")}`, 14, 28);
+
+    const tableData = note.items.map((item: any) => [
+      item.name,
+      `${item.quantity}kg`,
+      `R$${item.sellPrice.toFixed(2)}`,
+      `R$${item.totalPrice.toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [["Produto", "Qtd", "Preço Unit.", "Subtotal"]],
+      body: tableData,
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.text(`Total: R$${note.totalAmount.toFixed(2)}`, 14, finalY);
+
+    doc.save(`nota-${note.id.slice(0, 6)}.pdf`);
+  };
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
@@ -48,8 +79,18 @@ export default function SaleNotesSheet({ open, setOpen, userId }: any) {
             {notes.map((note) => (
               <div
                 key={note.id}
-                className="border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
+                className="relative border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
               >
+                {/* Botão de PDF */}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute top-2 right-2"
+                  onClick={() => handleDownloadPDF(note)}
+                >
+                  <FileDown className="h-5 w-5" />
+                </Button>
+
                 <div className="flex justify-between items-center mb-2">
                   <p className="font-semibold">Nota #{note.id.slice(0, 6)}</p>
                   <p className="text-sm text-gray-500">
