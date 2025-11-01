@@ -12,6 +12,7 @@ import PartsTable from "./_components/PartsTable";
 import EditPartSheet from "./_components/EditPartSheet";
 import SalesSummarySheet from "./_components/SalesSummarySheet";
 import SalesChartDrawer from "./_components/SalesChartDrawer";
+import { playSound } from "utils/play-sound";
 
 // Helper
 const formatCurrency = (amount: number) => {
@@ -159,6 +160,7 @@ export default function GraphicsPartsPage() {
         prev.map((p) => (p.id === updatedPart.id ? updatedPart : p))
       );
       toast.success("Baixa registrada com sucesso!");
+      playSound("/sounds/cash-register.mp3");
       setOpenSheet(false);
     } catch {
       toast.error("Erro ao registrar baixa");

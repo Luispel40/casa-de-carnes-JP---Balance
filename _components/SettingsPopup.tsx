@@ -305,10 +305,23 @@ export default function SettingsPopup({
     setParts(generatedParts);
   };
 
+  // 🔹 Novo comportamento ao salvar
   const handleSubmit = () => {
-    const adjustedParts = parts.map((p) =>
-      p.name.toLowerCase().trim() === "quebra" ? { ...p, sellPrice: 0 } : p
-    );
+    let adjustedParts = [...parts];
+
+    // Se for um produto sem padrão, cria uma part espelhando os dados principais
+    if (type === "posts" && !selectedPattern) {
+      adjustedParts = [
+        {
+          name: formData.title || "Produto",
+          weight: parseFloat(formData.weight) || 0,
+          price: parseFloat(formData.price) || 0,
+          sellPrice: parseFloat(formData.sellPrice) || 0,
+          percentage: 100,
+          isActive: true,
+        },
+      ];
+    }
 
     const quebraPart = adjustedParts.find(
       (p) => p.name.toLowerCase().trim() === "quebra"
@@ -325,10 +338,22 @@ export default function SettingsPopup({
       parts: adjustedParts,
     };
 
-    console.log("📦 Payload enviado:", JSON.stringify(payload, null, 2));
     onSubmit(payload);
     onClose();
   };
+
+  // 🔹 Validação do botão Salvar
+  const isSaveDisabled = (() => {
+    if (type === "posts") {
+      return !(
+        formData.title ||
+        formData.name
+      ) || !formData.price || !formData.weight || !formData.categoryId;
+    } else if (type === "patterns") {
+      return !formData.name || !formData.categoryId;
+    }
+    return !formData.name;
+  })();
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
@@ -344,6 +369,7 @@ export default function SettingsPopup({
         </CardHeader>
 
         <CardContent className="space-y-4">
+          {/* Campos principais */}
           {fields.map((field) => (
             <div key={field.name} className="flex flex-col">
               <label className="text-sm font-medium mb-1">{field.label}</label>
@@ -358,6 +384,7 @@ export default function SettingsPopup({
             </div>
           ))}
 
+          {/* Posts */}
           {type === "posts" && (
             <>
               <div className="flex flex-col">
@@ -414,10 +441,15 @@ export default function SettingsPopup({
             </>
           )}
 
-          <Button className="w-full mt-4" onClick={handleSubmit}>
+          <Button
+            className="w-full mt-4"
+            onClick={handleSubmit}
+            disabled={isSaveDisabled}
+          >
             {mode === "edit" ? "Salvar alterações" : "Salvar"}
           </Button>
 
+          {/* Patterns */}
           {type === "patterns" && (
             <div className="space-y-2 border-t pt-3">
               <NativeSelect
@@ -444,7 +476,6 @@ export default function SettingsPopup({
                   <Input
                     placeholder="Nome da parte"
                     value={part.name}
-                    disabled={part.name.toLowerCase() === "quebra"}
                     onChange={(e) =>
                       handlePartChange(index, "name", e.target.value)
                     }
