@@ -113,10 +113,23 @@ model Sale {
 model SaleNote {
   id          String   @id @default(cuid())
   userId      String
-  createdAt   DateTime @default(now())
   totalAmount Float
-  items       Json
+  createdAt   DateTime @default(now())
+  items       SaleNoteItem[]
 }
+
+model SaleNoteItem {
+  id          String   @id @default(cuid())
+  saleNoteId  String
+  partId      String
+  name        String
+  quantity    Float
+  sellPrice   Float
+  totalPrice  Float
+  profit      Float
+  saleNote    SaleNote @relation(fields: [saleNoteId], references: [id])
+}
+
 
 
 model Employee {

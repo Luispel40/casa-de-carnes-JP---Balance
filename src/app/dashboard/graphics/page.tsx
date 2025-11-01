@@ -13,6 +13,7 @@ import EditPartSheet from "./_components/EditPartSheet";
 import SalesSummarySheet from "./_components/SalesSummarySheet";
 import SalesChartDrawer from "./_components/SalesChartDrawer";
 import { playSound } from "utils/play-sound";
+import SaleNotesSheet from "./_components/SaleNotesSheet";
 
 // Helper
 const formatCurrency = (amount: number) => {
@@ -50,6 +51,7 @@ export default function GraphicsPartsPage() {
     { part: any; soldValue: number; sellPrice: number }[]
   >([]);
   const [openEditSheet, setOpenEditSheet] = useState(false);
+  const [openNotesSheet, setOpenNotesSheet] = useState(false);
 
   // Popup
   const [openPopup, setOpenPopup] = useState(false);
@@ -103,95 +105,96 @@ export default function GraphicsPartsPage() {
 
   // Abrir sheet de edição
   const handleOpenEditSheet = (part: any) => {
-  setSoldParts((prev) => {
-    if (prev.some((p) => p.part.id === part.id)) return prev; // evita duplicatas
-    return [...prev, { part, soldValue: 0, sellPrice: part.sellPrice || 0 }];
-  });
-  setOpenEditSheet(true);
-};
+    setSoldParts((prev) => {
+      if (prev.some((p) => p.part.id === part.id)) return prev; // evita duplicatas
+      return [...prev, { part, soldValue: 0, sellPrice: part.sellPrice || 0 }];
+    });
+    setOpenEditSheet(true);
+  };
 
-const fillAllRemaining = (index: number) => {
-  setSoldParts((prev) => {
-    const updated = [...prev];
-    const item = updated[index];
-    if (!item) return updated;
-    item.soldValue = item.part.weight - (item.part.sold || 0);
-    return updated;
-  });
-};
+  const fillAllRemaining = (index: number) => {
+    setSoldParts((prev) => {
+      const updated = [...prev];
+      const item = updated[index];
+      if (!item) return updated;
+      item.soldValue = item.part.weight - (item.part.sold || 0);
+      return updated;
+    });
+  };
 
-const handleBaixa = async () => {
-  if (soldParts.length === 0) {
-    toast.error("Adicione pelo menos uma parte para dar baixa.");
-    return;
-  }
-
-  for (const item of soldParts) {
-    if (item.soldValue <= 0) {
-      toast.error(`Quantidade inválida para ${item.part.name}.`);
+  const handleBaixa = async () => {
+    if (soldParts.length === 0) {
+      toast.error("Adicione pelo menos uma parte para dar baixa.");
       return;
     }
-    const restante = item.part.weight - (item.part.sold || 0);
-    if (item.soldValue > restante) {
-      toast.error(`Você não pode vender mais que ${restante}kg de ${item.part.name}.`);
-      return;
-    }
-  }
 
-  try {
-    // Atualiza cada parte e cria vendas
     for (const item of soldParts) {
-      const { part, soldValue, sellPrice } = item;
-
-      const partRes = await fetch(`/api/parts/${part.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sold: (part.sold || 0) + soldValue,
-          sellPrice,
-        }),
-      });
-      if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
-      const updatedPart = await partRes.json();
-
-      const totalPrice = soldValue * sellPrice;
-      const profit = (sellPrice - (part.price || 0)) * soldValue;
-
-      await fetch(`/api/sales`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          partId: part.id,
-          quantity: soldValue,
-          totalPrice,
-          profit,
-        }),
-      });
-
-      await fetch(`/api/posts/${session?.user?.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: part.postId,
-          sold: (part.postSold || 0) + soldValue,
-        }),
-      });
-
-      setParts((prev) =>
-        prev.map((p) => (p.id === updatedPart.id ? updatedPart : p))
-      );
+      if (item.soldValue <= 0) {
+        toast.error(`Quantidade inválida para ${item.part.name}.`);
+        return;
+      }
+      const restante = item.part.weight - (item.part.sold || 0);
+      if (item.soldValue > restante) {
+        toast.error(
+          `Você não pode vender mais que ${restante}kg de ${item.part.name}.`
+        );
+        return;
+      }
     }
 
-    toast.success("Baixa registrada com sucesso!");
-    playSound("/sounds/cash-register.mp3");
-    setSoldParts([]);
-    setOpenEditSheet(false);
-  } catch (err) {
-    console.error(err);
-    toast.error("Erro ao registrar baixa");
-  }
-};
+    try {
+      // Atualiza cada parte e cria vendas
+      for (const item of soldParts) {
+        const { part, soldValue, sellPrice } = item;
 
+        const partRes = await fetch(`/api/parts/${part.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sold: (part.sold || 0) + soldValue,
+            sellPrice,
+          }),
+        });
+        if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
+        const updatedPart = await partRes.json();
+
+        const totalPrice = soldValue * sellPrice;
+        const profit = (sellPrice - (part.price || 0)) * soldValue;
+
+        await fetch(`/api/sales`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            partId: part.id,
+            quantity: soldValue,
+            totalPrice,
+            profit,
+          }),
+        });
+
+        await fetch(`/api/posts/${session?.user?.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: part.postId,
+            sold: (part.postSold || 0) + soldValue,
+          }),
+        });
+
+        setParts((prev) =>
+          prev.map((p) => (p.id === updatedPart.id ? updatedPart : p))
+        );
+      }
+
+      toast.success("Baixa registrada com sucesso!");
+      playSound("/sounds/cash-register.mp3");
+      setSoldParts([]);
+      setOpenEditSheet(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao registrar baixa");
+    }
+  };
 
   // Criar novo post
   const handleCreatePost = async (data: any) => {
@@ -387,23 +390,29 @@ const handleBaixa = async () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4">
       <Button
-        className="fixed bottom-24 right-6 rounded-full p-4 shadow-xl bg-green-600 text-white"
+        className="group fixed bottom-16 right-6 flex items-center gap-2 rounded-full bg-green-600 text-white shadow-xl transition-all duration-300 hover:pr-6"
         onClick={() => {
           fetchSalesChart();
           setOpenDrawer(true);
         }}
       >
-        📈 Estatísticas de Vendas
+        <span className="p-4">📈</span>
+        <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-xs">
+          Estatísticas
+        </span>
       </Button>
 
       <Button
-        className="fixed bottom-6 right-6 rounded-full p-4 shadow-xl bg-blue-600 text-white"
+        className="group fixed bottom-6 right-6 flex items-center gap-2 rounded-full bg-blue-600 text-white shadow-xl transition-all duration-300 hover:pr-6"
         onClick={() => {
           calculateSalesData();
           setOpenSalesSheet(true);
         }}
       >
-        📊 Vendas & Lucro
+        <span className="p-4">📊</span>
+        <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-xs">
+          Vendas & Lucro
+        </span>
       </Button>
 
       {/* Header */}
@@ -423,14 +432,25 @@ const handleBaixa = async () => {
           parts={parts}
           selectedPost={selectedPost}
           setSelectedPost={setSelectedPost}
-          handleOpenEditSheet ={handleOpenEditSheet }
+          handleOpenEditSheet={handleOpenEditSheet}
           handleDeletePart={handleDeletePart}
         />
       </div>
 
-      <Button className="mt-4" onClick={() => setOpenPopup(true)}>
-        + Adicionar Item
-      </Button>
+      <div className="flex gap-2 mt-4">
+        <Button className="mt-4" onClick={() => setOpenPopup(true)}>
+          + Adicionar Item
+        </Button>
+        <Button
+          onClick={() => setOpenNotesSheet(true)}
+          className="group fixed bottom-26 right-6 flex items-center gap-2 rounded-full bg-yellow-600 text-white shadow-xl transition-all duration-300 hover:pr-6"
+        >
+          <span className="p-4">🧾</span>
+          <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-xs">
+            Notas de Venda
+          </span>
+        </Button>
+      </div>
       {openPopup && (
         <SettingsPopup
           type="posts"
@@ -439,6 +459,13 @@ const handleBaixa = async () => {
           onSubmit={handleCreatePost}
         />
       )}
+
+      {/* 👇 novo componente */}
+      <SaleNotesSheet
+        open={openNotesSheet}
+        setOpen={setOpenNotesSheet}
+        userId={session?.user?.id}
+      />
 
       {/* Sheets e Drawer */}
       <EditPartSheet

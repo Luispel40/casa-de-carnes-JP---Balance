@@ -34,6 +34,8 @@ import {
 } from "@/_components/ui/popover";
 import { toast } from "sonner";
 import { formatCurrency } from "@/helpers/format-currency";
+import { playSound } from "utils/play-sound";
+import { useSession } from "next-auth/react";
 
 interface EditPartSheetProps {
   open: boolean;
@@ -62,11 +64,12 @@ export default function EditPartSheet({
   soldParts,
   setSoldParts,
   fillAllRemaining,
-  handleBaixa,
 }: EditPartSheetProps) {
+  const { data: session } = useSession();
   const [availableParts, setAvailableParts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Buscar partes disponíveis na API
   useEffect(() => {
@@ -123,6 +126,132 @@ export default function EditPartSheet({
     setSoldParts((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // 🔹 Calcular total da venda
+  const totalSale = soldParts.reduce(
+    (acc, item) => acc + item.soldValue * item.sellPrice,
+    0
+  );
+
+  // 🔹 Confirmar venda e gerar nota
+  const handleConfirmSale = async () => {
+    if (!session?.user?.id) {
+      toast.error("Usuário não autenticado.");
+      return;
+    }
+
+    if (soldParts.length === 0) {
+      toast.error("Adicione pelo menos uma parte.");
+      return;
+    }
+
+    setIsConfirming(true);
+
+    try {
+      const saleItems: {
+        partId: string;
+        name: string;
+        quantity: number;
+        sellPrice: number;
+        totalPrice: number;
+        profit: number;
+      }[] = [];
+
+      for (const item of soldParts) {
+        const { part, soldValue, sellPrice } = item;
+
+        if (soldValue <= 0) {
+          toast.error(`Quantidade inválida para ${part.name}.`);
+          setIsConfirming(false);
+          return;
+        }
+
+        const restante = part.weight - (part.sold || 0);
+        if (soldValue > restante) {
+          toast.error(
+            `Você não pode vender mais que ${restante}kg de ${part.name}.`
+          );
+          setIsConfirming(false);
+          return;
+        }
+
+        // Atualiza parte
+        const partRes = await fetch(`/api/parts/${part.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sold: (part.sold || 0) + soldValue,
+            sellPrice,
+          }),
+        });
+        if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
+        const updatedPart = await partRes.json();
+
+        const totalPrice = soldValue * sellPrice;
+        const profit = (sellPrice - (part.price || 0)) * soldValue;
+
+        saleItems.push({
+          partId: part.id,
+          name: part.name,
+          quantity: soldValue,
+          sellPrice,
+          totalPrice,
+          profit,
+        });
+
+        // Registra venda individual
+        await fetch(`/api/sales`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            partId: part.id,
+            quantity: soldValue,
+            totalPrice,
+            profit,
+          }),
+        });
+
+        // Atualiza post agregado
+        await fetch(`/api/posts/${session?.user?.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: part.postId,
+            sold: (part.postSold || 0) + soldValue,
+          }),
+        });
+      }
+
+      // 🔹 Criar nota de venda
+      const notaRes = await fetch("/api/salenotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session.user.id,
+          totalAmount: totalSale,
+          items: saleItems,
+        }),
+      });
+
+      const result = await notaRes.json();
+      if (!notaRes.ok) {
+        console.error("Erro ao criar nota:", result);
+        throw new Error("Erro ao criar nota de venda");
+      }
+
+      if (!notaRes.ok) throw new Error("Erro ao criar nota de venda");
+
+      toast.success("Venda registrada e nota gerada com sucesso!");
+      playSound("/sounds/cash-register.mp3");
+      setSoldParts([]);
+      setOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao registrar baixa.");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className="px-6 flex flex-col max-h-screen">
@@ -133,8 +262,8 @@ export default function EditPartSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {/* Adicionar nova parte */}
-        <div className="mb-4">
+        {/* Adicionar nova parte + total */}
+        <div className="mb-4 flex justify-between items-center">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -171,6 +300,10 @@ export default function EditPartSheet({
               </Command>
             </PopoverContent>
           </Popover>
+
+          <span className="text-gray-700 font-medium">
+            Total: {formatCurrency(totalSale)}
+          </span>
         </div>
 
         {/* Lista de partes adicionadas */}
@@ -239,32 +372,49 @@ export default function EditPartSheet({
 
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="default" className="flex items-center gap-2">
+              <Button
+                variant="default"
+                className="flex items-center gap-2"
+                disabled={soldParts.length === 0}
+              >
                 Confirmar <DollarSign className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Você tem certeza?</DialogTitle>
-                <DialogDescription>
-                  Confirme a baixa das partes selecionadas:
-                  <ul className="mt-2 list-disc list-inside">
-                    {soldParts.map((p, i) => (
-                      <li key={i}>
-                        {p.soldValue}kg de {p.part.name} por{" "}
-                        {formatCurrency(p.sellPrice)}
-                      </li>
-                    ))}
-                  </ul>
-                </DialogDescription>
-              </DialogHeader>
-              <DialogClose asChild>
-                <Button onClick={handleBaixa}>Confirmar</Button>
-              </DialogClose>
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-            </DialogContent>
+  <DialogHeader>
+    <DialogTitle>Confirmar venda</DialogTitle>
+  </DialogHeader>
+
+  <div className="space-y-2">
+    <p className="text-sm text-muted-foreground">
+      Confirme a baixa das partes selecionadas:
+    </p>
+
+    <ul className="list-disc list-inside text-sm text-muted-foreground">
+      {soldParts.map((p, i) => (
+        <li key={i}>
+          {p.soldValue}kg de {p.part.name} por {formatCurrency(p.sellPrice)}
+        </li>
+      ))}
+    </ul>
+
+    <div className="mt-2 font-semibold">
+      Total: {formatCurrency(totalSale)}
+    </div>
+  </div>
+
+  <div className="flex justify-end gap-2 mt-4">
+    <DialogClose asChild>
+      <Button onClick={handleConfirmSale} disabled={isConfirming}>
+        {isConfirming ? "Gerando nota..." : "Confirmar"}
+      </Button>
+    </DialogClose>
+    <DialogClose asChild>
+      <Button variant="outline">Cancelar</Button>
+    </DialogClose>
+  </div>
+</DialogContent>
+
           </Dialog>
         </SheetFooter>
       </SheetContent>
