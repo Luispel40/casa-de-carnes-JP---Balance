@@ -46,6 +46,10 @@ export default function GraphicsPartsPage() {
   const [selectedPart, setSelectedPart] = useState<any>(null);
   const [soldValue, setSoldValue] = useState<number>(0);
   const [sellPrice, setSellPrice] = useState<number>(0);
+  const [soldParts, setSoldParts] = useState<
+    { part: any; soldValue: number; sellPrice: number }[]
+  >([]);
+  const [openEditSheet, setOpenEditSheet] = useState(false);
 
   // Popup
   const [openPopup, setOpenPopup] = useState(false);
@@ -98,49 +102,66 @@ export default function GraphicsPartsPage() {
   };
 
   // Abrir sheet de edição
-  const openEditSheet = (part: any) => {
-    setSelectedPart(part);
-    setSoldValue(0);
-    setSellPrice(part.sellPrice || 0);
-    setOpenSheet(true);
-  };
+  const handleOpenEditSheet = (part: any) => {
+  setSoldParts((prev) => {
+    if (prev.some((p) => p.part.id === part.id)) return prev; // evita duplicatas
+    return [...prev, { part, soldValue: 0, sellPrice: part.sellPrice || 0 }];
+  });
+  setOpenEditSheet(true);
+};
 
-  const fillAllRemaining = () => {
-    if (!selectedPart) return;
-    setSoldValue(selectedPart.weight - (selectedPart.sold || 0));
-  };
+const fillAllRemaining = (index: number) => {
+  setSoldParts((prev) => {
+    const updated = [...prev];
+    const item = updated[index];
+    if (!item) return updated;
+    item.soldValue = item.part.weight - (item.part.sold || 0);
+    return updated;
+  });
+};
 
-  const handleBaixa = async () => {
-    if (!selectedPart || soldValue <= 0) {
-      toast.error("Informe uma quantidade válida para dar baixa.");
+const handleBaixa = async () => {
+  if (soldParts.length === 0) {
+    toast.error("Adicione pelo menos uma parte para dar baixa.");
+    return;
+  }
+
+  for (const item of soldParts) {
+    if (item.soldValue <= 0) {
+      toast.error(`Quantidade inválida para ${item.part.name}.`);
       return;
     }
-
-    const restante = selectedPart.weight - (selectedPart.sold || 0);
-    if (soldValue > restante) {
-      toast.error(`Você não pode vender mais que ${restante}kg.`);
+    const restante = item.part.weight - (item.part.sold || 0);
+    if (item.soldValue > restante) {
+      toast.error(`Você não pode vender mais que ${restante}kg de ${item.part.name}.`);
       return;
     }
+  }
 
-    try {
-      const partRes = await fetch(`/api/parts/${selectedPart.id}`, {
+  try {
+    // Atualiza cada parte e cria vendas
+    for (const item of soldParts) {
+      const { part, soldValue, sellPrice } = item;
+
+      const partRes = await fetch(`/api/parts/${part.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sold: (selectedPart.sold || 0) + soldValue,
+          sold: (part.sold || 0) + soldValue,
           sellPrice,
         }),
       });
-      if (!partRes.ok) throw new Error("Erro ao atualizar parte");
+      if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
       const updatedPart = await partRes.json();
 
       const totalPrice = soldValue * sellPrice;
-      const profit = (sellPrice - (selectedPart.price || 0)) * soldValue;
+      const profit = (sellPrice - (part.price || 0)) * soldValue;
+
       await fetch(`/api/sales`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          partId: selectedPart.id,
+          partId: part.id,
           quantity: soldValue,
           totalPrice,
           profit,
@@ -151,21 +172,26 @@ export default function GraphicsPartsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: selectedPart.postId,
-          sold: (selectedPart.postSold || 0) + soldValue,
+          id: part.postId,
+          sold: (part.postSold || 0) + soldValue,
         }),
       });
 
       setParts((prev) =>
         prev.map((p) => (p.id === updatedPart.id ? updatedPart : p))
       );
-      toast.success("Baixa registrada com sucesso!");
-      playSound("/sounds/cash-register.mp3");
-      setOpenSheet(false);
-    } catch {
-      toast.error("Erro ao registrar baixa");
     }
-  };
+
+    toast.success("Baixa registrada com sucesso!");
+    playSound("/sounds/cash-register.mp3");
+    setSoldParts([]);
+    setOpenEditSheet(false);
+  } catch (err) {
+    console.error(err);
+    toast.error("Erro ao registrar baixa");
+  }
+};
+
 
   // Criar novo post
   const handleCreatePost = async (data: any) => {
@@ -397,7 +423,7 @@ export default function GraphicsPartsPage() {
           parts={parts}
           selectedPost={selectedPost}
           setSelectedPost={setSelectedPost}
-          openEditSheet={openEditSheet}
+          handleOpenEditSheet ={handleOpenEditSheet }
           handleDeletePart={handleDeletePart}
         />
       </div>
@@ -416,14 +442,19 @@ export default function GraphicsPartsPage() {
 
       {/* Sheets e Drawer */}
       <EditPartSheet
-        open={openSheet}
-        setOpen={setOpenSheet}
-        selectedPart={selectedPart}
-        soldValue={soldValue}
-        setSoldValue={setSoldValue}
-        sellPrice={sellPrice}
-        setSellPrice={setSellPrice}
-        fillAllRemaining={fillAllRemaining}
+        open={openEditSheet}
+        setOpen={setOpenEditSheet}
+        soldParts={soldParts}
+        setSoldParts={setSoldParts}
+        fillAllRemaining={(index) => {
+          setSoldParts((prev) => {
+            const updated = [...prev];
+            const item = updated[index];
+            if (!item) return updated;
+            item.soldValue = item.part.weight - (item.part.sold || 0);
+            return updated;
+          });
+        }}
         handleBaixa={handleBaixa}
       />
 

@@ -28,7 +28,7 @@ interface PartsTableProps {
   parts: any[];
   selectedPost: string;
   setSelectedPost: (id: string) => void;
-  openEditSheet: (part: any) => void;
+  handleOpenEditSheet : (part: any) => void;
   handleDeletePart: (id: string, name: string) => void;
   handleUpdateSellPrice?: (id: string, newSellPrice: number) => void;
 }
@@ -38,7 +38,7 @@ export default function PartsTable({
   parts,
   selectedPost,
   setSelectedPost,
-  openEditSheet,
+  handleOpenEditSheet ,
   handleDeletePart,
   handleUpdateSellPrice,
 }: PartsTableProps) {
@@ -228,7 +228,7 @@ export default function PartsTable({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => openEditSheet(part)}
+                    onClick={() => handleOpenEditSheet (part)}
                   >
                     <DollarSign />
                   </Button>

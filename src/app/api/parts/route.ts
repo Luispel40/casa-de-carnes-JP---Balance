@@ -27,3 +27,22 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const parts = await db.part.findMany({
+      include: {
+        post: {
+          select: { title: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(parts);
+  } catch (error) {
+    console.error("Erro ao buscar partes:", error);
+    return NextResponse.json({ error: "Erro ao buscar partes" }, { status: 500 });
+  }
+}
+

@@ -110,6 +110,15 @@ model Sale {
   createdAt  DateTime @default(now())
 }
 
+model SaleNote {
+  id          String   @id @default(cuid())
+  userId      String
+  createdAt   DateTime @default(now())
+  totalAmount Float
+  items       Json
+}
+
+
 model Employee {
   id          String   @id @default(cuid())
   name        String
