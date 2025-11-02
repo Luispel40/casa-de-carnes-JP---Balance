@@ -17,6 +17,7 @@ import { NativeSelect } from "@/_components/ui/native-select";
 import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 
 interface CardItemProps {
   userId: string;
@@ -109,6 +110,13 @@ export default function CardItem({ userId, selected }: CardItemProps) {
       case "profile":
         return (
           <div className="space-y-2" key={data.id}>
+            <Image
+              src={data.image}
+              alt={data.name}
+              width={40}
+              height={40}
+              className="m-auto -mt-5 rounded-full"
+            /> 
             <p>
               <strong>Nome:</strong> {data.name}
             </p>
