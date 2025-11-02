@@ -110,16 +110,19 @@ export default function CardItem({ userId, selected }: CardItemProps) {
       case "profile":
         return (
           <div className="space-y-2" key={data.id}>
-            <Image
+            <div className="flex w-full flex-row items-center justify-start gap-4">
+              {data.image && (
+              <Image
               src={data.image}
               alt={data.name}
-              width={40}
-              height={40}
-              className="m-auto -mt-5 rounded-full"
+              width={50}
+              height={50}
+              className=" -mt-16 rounded-full"
             /> 
-            <p>
-              <strong>Nome:</strong> {data.name}
-            </p>
+            )}
+              <p className="text-xl font-semibold md:text-3xl text-left -mt-14">{data.name}</p>
+            </div>
+            <div className="space-y-2 max-h-[150px] overflow-auto">
             <p>
               <strong>Email:</strong> {data.email}
             </p>
@@ -132,6 +135,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
             <p>
               <strong>Empresa:</strong> {data.enteprise}
             </p>
+            </div>
           </div>
         );
 
