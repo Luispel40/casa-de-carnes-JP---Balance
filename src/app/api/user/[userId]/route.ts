@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
-// 🧾 Buscar usuário
+// 🔍 Buscar usuário
 export async function GET(_: NextRequest, context: any) {
   const { userId } = context.params;
 
@@ -27,6 +27,10 @@ export async function PATCH(req: NextRequest, context: any) {
   const { userId } = context.params;
   const body = await req.json();
 
+  if (!body.name || !body.email) {
+    return NextResponse.json({ error: "Nome e e-mail são obrigatórios" }, { status: 400 });
+  }
+
   try {
     const updated = await db.user.update({
       where: { id: userId },
@@ -35,7 +39,7 @@ export async function PATCH(req: NextRequest, context: any) {
         email: body.email,
         image: body.image,
         address: body.address,
-        enteprise: body.enterprise, // cuidado: o campo no schema é "enteprise"
+        enteprise: body.enterprise,
         phone: body.phone,
       },
     });
