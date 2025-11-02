@@ -1,6 +1,6 @@
 const FooterPage = () => {
     return ( 
-        <footer className="w-full p-6 text-center">
+        <footer className="w-full p-6 text-center mt-auto align-bottom h-auto">
         <span className="text-sm text-gray-500 sm:text-center dark:text-gray-400 w-[300px] m-auto">© 2026 <a href="https://alphawebs.com.br/" target="_/blank" className="hover:underline">Alphawebs</a>. All Rights Reserved.
         </span>
         <ul className="flex gap-5 mt-4 text-sm text-gray-500 justify-evenly border-t-2 border-gray-500/50 p-6">

@@ -18,7 +18,7 @@ const PostItem: React.FC<PostItemProps> = ({ data, onSelectCategory, children })
         ))}
       </NativeSelect>
 
-      <ul className="list-disc list-inside space-y-1 mt-3">
+      <ul className="list-disc list-inside space-y-1 mt-3 overflow-auto max-h-36">
         {children}
       </ul>
     </>

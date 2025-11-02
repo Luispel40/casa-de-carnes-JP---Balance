@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>
+      <body className={fonte.className + " bg-gray-100 dark:bg-gray-900 min-h-dvh flex flex-col justify-around"}>
         <Providers>
           <DataCacheProvider>
             <HeaderPage />

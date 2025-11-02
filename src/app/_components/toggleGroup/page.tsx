@@ -15,6 +15,7 @@ export function ToggleGroupButtons({ value, onChange }: Props) {
       value={value}
       onValueChange={(val) => val && onChange(val)}
       className="gap-2"
+      variant="default"
     >
       <ToggleGroupItem value="profile">
         <User />

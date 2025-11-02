@@ -227,7 +227,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
   };
 
   return (
-    <Card className="w-96 min-h-[400px] max-h-[400px]">
+    <Card className="w-96 min-h-[300px] max-h-[300px]">
       <CardHeader>
         <CardTitle>{selectedCategory}</CardTitle>
         <CardAction>
@@ -242,7 +242,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
         </CardAction>
         <CardDescription></CardDescription>
       </CardHeader>
-      <CardContent className="overflow-auto">{renderContent()}</CardContent>
+      <CardContent >{renderContent()}</CardContent>
     </Card>
   );
 }

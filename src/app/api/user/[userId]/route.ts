@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
-export async function GET(req: NextRequest, context: any) {
-  const { userId } = context.params; // pegue direto
+// 🧾 Buscar usuário
+export async function GET(_: NextRequest, context: any) {
+  const { userId } = context.params;
 
   try {
     const user = await db.user.findUnique({
@@ -18,5 +19,43 @@ export async function GET(req: NextRequest, context: any) {
   } catch (error) {
     console.error("Erro ao buscar usuário:", error);
     return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 });
+  }
+}
+
+// ✏️ Atualizar usuário
+export async function PATCH(req: NextRequest, context: any) {
+  const { userId } = context.params;
+  const body = await req.json();
+
+  try {
+    const updated = await db.user.update({
+      where: { id: userId },
+      data: {
+        name: body.name,
+        email: body.email,
+        image: body.image,
+        address: body.address,
+        enteprise: body.enterprise, // cuidado: o campo no schema é "enteprise"
+        phone: body.phone,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Erro ao atualizar usuário:", error);
+    return NextResponse.json({ error: "Erro ao atualizar usuário" }, { status: 500 });
+  }
+}
+
+// 🗑️ Deletar usuário
+export async function DELETE(_: NextRequest, context: any) {
+  const { userId } = context.params;
+
+  try {
+    await db.user.delete({ where: { id: userId } });
+    return NextResponse.json({ message: "Usuário deletado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao deletar usuário:", error);
+    return NextResponse.json({ error: "Erro ao deletar usuário" }, { status: 500 });
   }
 }

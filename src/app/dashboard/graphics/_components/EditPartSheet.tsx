@@ -15,7 +15,6 @@ import { DollarSign, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -333,8 +332,8 @@ export default function EditPartSheet({
                   <Input
                     type="number"
                     min={0}
-                    max={item.part.weight - (item.part.sold || 0)}
-                    value={item.soldValue}
+                    max={Number(item.part.weight) - (item.part.sold || 0)}
+                    value={(item.soldValue || 0)}
                     onChange={(e) =>
                       handleSoldChange(i, Number(e.target.value))
                     }
@@ -358,6 +357,7 @@ export default function EditPartSheet({
                   onChange={(e) =>
                     handleSellPriceChange(i, Number(e.target.value))
                   }
+                  disabled
                 />
               </div>
             </div>

@@ -255,8 +255,8 @@ export default function PartsTable({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-3 px-0">
+      <div className="flex items-center gap-6">
         {/* 🔹 Combobox de seleção */}
         <Popover open={openCombo} onOpenChange={setOpenCombo}>
           <PopoverTrigger asChild>
@@ -356,8 +356,6 @@ export default function PartsTable({
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-
-                  {/* Editar preço */}
                   <Button
                     variant="ghost"
                     size="icon-sm"

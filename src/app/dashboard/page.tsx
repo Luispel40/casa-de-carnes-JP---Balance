@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <main className="flex flex-col items-center justify-center gap-4">
       <DashboardClient user={session.user} />
       <FloatingCalculator />
       

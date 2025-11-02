@@ -4,7 +4,7 @@ import React, { use, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/_components/ui/button";
-import { ChevronLeft, Loader } from "lucide-react";
+import { ChevronLeft, Loader, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 
 import SettingsPopup from "_components/SettingsPopup";
@@ -361,7 +361,7 @@ export default function GraphicsPartsPage() {
     );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[350px] gap-4">
+    <div className="flex flex-col items-center">
       <Button
         className="group fixed bottom-16 right-6 flex items-center gap-2 rounded-full bg-green-600 text-white shadow-xl transition-all duration-300 hover:pr-6"
         onClick={() => {
@@ -389,14 +389,17 @@ export default function GraphicsPartsPage() {
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col items-center justify-center h-[400px] gap-4 border border-gray-200 rounded-xl w-full sm:w-[600px] p-2">
-        <div className="flex items-center gap-2 w-full justify-between">
+      <div className="flex flex-col w-full gap-4 sm:w-[600px] bg-white rounded-md p-4 mt-3 px-6">
+        <div className="flex items-center gap-2 justify-between w-full">
           <Button variant="outline" asChild>
             <Link href="/dashboard">
               <ChevronLeft className="mr-2 h-4 w-4" />
             </Link>
           </Button>
           <h1 className="text-2xl font-bold">Produtos</h1>
+          <Button onClick={handleOpenEditSheet} variant="outline">
+            <ShoppingCart className="mr-2 h-4 w-4" />
+          </Button>
         </div>
 
         {/* Tabela de partes */}

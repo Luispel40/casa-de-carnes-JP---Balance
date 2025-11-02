@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/_components/ui/button";
-import { signOut } from "next-auth/react";
 import { ToggleGroupButtons } from "../_components/toggleGroup/page";
 import CardItem from "./card";
 
 export default function DashboardClient({ user }: { user: any }) {
-  const [selected, setSelected] = useState("posts"); // valor inicial
+  const [selected, setSelected] = useState("profile"); // valor inicial
 
   return (
-    <main className="flex flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-bold">
-        Bem-vindo, {user?.name || "Usuário"}
-      </h1>
+    <main className="flex flex-col items-center justify-center">
 
       <ToggleGroupButtons value={selected} onChange={setSelected} /> 
       <CardItem userId={user.id} selected={selected} />
