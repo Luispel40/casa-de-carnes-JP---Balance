@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import FooterPage from "./_components/footer/page";
 import { DataCacheProvider } from "_contexts/DataCacheContext";
 import HeaderPage from "./_components/header/page";
+import AuthProvider from "@/_components/AuthProvider";
 
 const fonte = Inter({
   subsets: ["latin"],
@@ -24,13 +25,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={fonte.className + " bg-gray-100 dark:bg-gray-900 min-h-dvh flex flex-col justify-around"}>
-        <Providers>
+        <AuthProvider>
           <DataCacheProvider>
             <HeaderPage />
             {children}
             <FooterPage />
           </DataCacheProvider>
-        </Providers>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

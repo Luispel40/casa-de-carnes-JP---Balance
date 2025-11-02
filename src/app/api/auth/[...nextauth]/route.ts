@@ -1,30 +1,32 @@
-// src/app/api/auth/[...nextauth]/route.ts (ou similar)
+// src/app/api/auth/[...nextauth]/route.ts
 
 import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth"; // Importa as opções de configuração
+import { authOptions } from "@/lib/auth";
 
-// Lógica de URL Dinâmica (Adicionada ao handler para robustez)
+// A variável NEXTAUTH_URL é lida automaticamente pelo NextAuth. 
+// Você pode (e deve) removê-la daqui, confiando apenas no .env.local, 
+// a menos que precise de uma lógica de fallback muito específica.
+
+/*
+// --- Lógica Opcional (se você quer manter o fallback robusto) ---
 const VERCEL_URL = process.env.VERCEL_URL;
 
-// Define a URL de forma robusta:
-// 1. Usa NEXTAUTH_URL (definida por você para Produção)
-// 2. Usa VERCEL_URL (se for um deploy de Preview)
-// 3. Padrão para localhost (Desenvolvimento)
 const NEXTAUTH_BASE_URL = process.env.NEXTAUTH_URL 
   ? process.env.NEXTAUTH_URL 
   : VERCEL_URL 
     ? `https://${VERCEL_URL}` 
     : "http://localhost:3000";
 
-
 const finalAuthOptions = {
     ...authOptions,
-    // Garante que a URL é configurada. O NextAuth irá priorizar isso.
-    url: NEXTAUTH_BASE_URL
+    // Note: Definir "url" geralmente é redundante se NEXTAUTH_URL estiver no .env
+    // Mas se quiser manter a lógica de fallback:
+    // url: NEXTAUTH_BASE_URL 
 };
+*/
 
-
-const handler = NextAuth(finalAuthOptions);
+// Simplificado: Apenas importa e usa as opções
+const handler = NextAuth(authOptions);
 
 // Exporta os handlers GET e POST para as rotas da API
 export { handler as GET, handler as POST };

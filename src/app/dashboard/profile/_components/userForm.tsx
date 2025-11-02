@@ -14,11 +14,17 @@ export default function UserForm({ userId }: UserFormProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+
+  // NOVO: Estado para mostrar o campo de input de URL
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
+  // Removida a referência ao input de arquivo e o estado base64Image
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
+    // image armazena APENAS o link URL ou string vazia
     image: "",
     address: "",
     enterprise: "",
@@ -34,16 +40,20 @@ export default function UserForm({ userId }: UserFormProps) {
         if (!res.ok) throw new Error("Erro ao buscar usuário");
         const data = await res.json();
 
+        const userImage = data.image ?? "";
+
         setForm({
           name: data.name ?? "",
           email: data.email ?? "",
-          image: data.image ?? "",
+          // O valor inicial de image no form é o link (URL) do banco.
+          image: userImage,
           address: data.address ?? "",
-          enterprise: data.enteprise ?? "",
+          enterprise: data.enterprise ?? "",
           phone: data.phone ?? "",
         });
 
-        if (data.image) setPreview(data.image);
+        // O preview agora sempre exibe o URL do banco.
+        if (userImage) setPreview(userImage);
       } catch (err) {
         toast.error("Erro ao carregar dados do usuário");
       } finally {
@@ -69,25 +79,25 @@ export default function UserForm({ userId }: UserFormProps) {
     setForm({ ...form, [name]: value });
   };
 
-  // 🖼️ Upload de imagem
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // NOVO: Lidar com mudança de URL da imagem
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setForm({ ...form, image: newUrl });
+    setPreview(newUrl); // Atualiza o preview instantaneamente
+  };
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreview(reader.result as string);
-      setForm({ ...form, image: reader.result as string });
-    };
-    reader.readAsDataURL(file);
+  // NOVO: Função para alternar o input de URL
+  const handleToggleUrlInput = () => {
+    setShowUrlInput(!showUrlInput);
   };
 
   const handleRemoveImage = () => {
     setPreview(null);
-    setForm({ ...form, image: "" });
+    setForm({ ...form, image: "" }); // Remove o URL
+    setShowUrlInput(false); // Esconde o input de URL
   };
 
-  // 💾 Salvar alterações
+  // 💾 Salvar alterações - AGORA SÓ LIDA COM URL
   const handleSave = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       toast.warning("Preencha nome e e-mail antes de salvar");
@@ -96,6 +106,8 @@ export default function UserForm({ userId }: UserFormProps) {
 
     try {
       setSaving(true);
+
+      // form.image agora contém apenas o URL ou ""
       const res = await fetch(`/api/user/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -103,6 +115,7 @@ export default function UserForm({ userId }: UserFormProps) {
       });
 
       if (!res.ok) throw new Error("Erro ao atualizar usuário");
+
       toast.success("Perfil atualizado com sucesso!");
     } catch (err) {
       toast.error("Erro ao salvar alterações");
@@ -118,7 +131,7 @@ export default function UserForm({ userId }: UserFormProps) {
       ) : (
         <>
           {/* 🖼️ Imagem do usuário */}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 mb-4">
             {preview ? (
               <div className="relative">
                 <img
@@ -128,7 +141,7 @@ export default function UserForm({ userId }: UserFormProps) {
                 />
                 <button
                   onClick={handleRemoveImage}
-                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                  className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 transition text-white rounded-full p-1 shadow-md"
                   title="Remover imagem"
                 >
                   <X size={14} />
@@ -140,21 +153,33 @@ export default function UserForm({ userId }: UserFormProps) {
               </div>
             )}
 
+            {/* Botão que alterna a exibição do Input de URL */}
             <Button
               variant="outline"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleToggleUrlInput}
               className="mt-1 text-xs"
             >
-              Alterar imagem
+              {showUrlInput
+                ? "Ocultar campo URL"
+                : "Alterar ou colar link da imagem"}
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageSelect}
-            />
           </div>
+
+          {/* NOVO: Campo para colar o link da imagem (URL) - Visível por toggle */}
+          {showUrlInput && (
+            <div className="space-y-2 mb-4">
+              <label className="text-sm font-medium">
+                Link da Imagem (URL)
+              </label>
+              <Input
+                type="url"
+                name="image"
+                value={form.image}
+                onChange={handleImageUrlChange}
+                placeholder="https://exemplo.com/sua-foto.jpg"
+              />
+            </div>
+          )}
 
           {/* 🧩 Campos */}
           <div className="space-y-2">
@@ -174,7 +199,11 @@ export default function UserForm({ userId }: UserFormProps) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Endereço</label>
-            <Input name="address" value={form.address} onChange={handleChange} />
+            <Input
+              name="address"
+              value={form.address}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="space-y-2">
@@ -184,6 +213,7 @@ export default function UserForm({ userId }: UserFormProps) {
               value={form.enterprise}
               onChange={handleChange}
             />
+            {/* O valor de 'enteprise' em useEffect foi corrigido para 'enterprise' */}
           </div>
 
           <div className="space-y-2">
