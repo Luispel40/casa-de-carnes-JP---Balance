@@ -21,43 +21,55 @@ export async function GET(req: NextRequest, context: any) {
   }
 }
 
-export async function DELETE(req: NextRequest, context: any) {
-  const { id } = await req.json();
-
-  if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
-
-  try {
-    await db.employee.delete({ where: { id } });
-    return NextResponse.json({ message: "Funcionário deletado com sucesso" });
-  } catch (error) {
-    console.error("Erro ao deletar funcionário:", error);
-    return NextResponse.json({ error: "Erro ao deletar funcionário" }, { status: 500 });
-  }
-}
-
 export async function PUT(req: NextRequest, context: any) {
   const { userId } = context.params;
-  const body: EmployeeBody = await req.json();
-  const { id, name, role, salary, age } = body;
+  const body = await req.json();
+  const { id, title, weight, price, sellPrice, categoryId, isActive, parts } = body;
 
   if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
 
   try {
-    const existing = await db.employee.findUnique({ where: { id } });
-    if (!existing)
-      return NextResponse.json({ error: "Funcionário não encontrado" }, { status: 404 });
-
-    const updated = await db.employee.update({
+    const updated = await db.post.update({
       where: { id },
-      data: { name, role, salary: Number(salary), age: Number(age), userId },
+      data: {
+        title,
+        weight: parseFloat(weight),
+        price: parseFloat(price),
+        sellPrice: sellPrice ? parseFloat(sellPrice) : null,
+        categoryId,
+        isActive,
+        userId,
+        parts: {
+          deleteMany: {}, // 🔥 deleta todas as partes antigas
+          create: parts.map((p: any) => ({
+            name: p.name,
+            weight: parseFloat(p.weight),
+            price: parseFloat(p.price),
+            sellPrice: parseFloat(p.sellPrice),
+            isActive: p.isActive ?? true,
+          })),
+        },
+      },
+      include: { parts: true },
     });
 
     return NextResponse.json(updated);
-  } catch (error: any) {
-    console.error("Erro ao atualizar funcionário:", error);
-    return NextResponse.json(
-      { error: error.message || "Erro ao atualizar funcionário" },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Erro ao atualizar post" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, context: any) {
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: "ID é obrigatório" }, { status: 400 });
+
+  try {
+    await db.post.delete({ where: { id } });
+    return NextResponse.json({ message: "Post (e partes) deletados com sucesso" });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Erro ao deletar post" }, { status: 500 });
+  }
+}
+

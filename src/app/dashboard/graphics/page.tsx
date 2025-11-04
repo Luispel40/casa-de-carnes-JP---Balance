@@ -14,6 +14,7 @@ import SalesSummarySheet from "./_components/SalesSummarySheet";
 import SalesChartDrawer from "./_components/SalesChartDrawer";
 import { playSound } from "utils/play-sound";
 import SaleNotesSheet from "./_components/SaleNotesSheet";
+import { Badge } from "@/_components/ui/badge";
 
 // Helper
 
@@ -67,7 +68,7 @@ export default function GraphicsPartsPage() {
               postTitle: post.title,
               postId: post.id,
               postSold: post.sold || 0,
-              userId
+              userId,
             })) || []
         );
         setParts(allParts);
@@ -98,11 +99,11 @@ export default function GraphicsPartsPage() {
   const handleOpenEditSheet = (part: any) => {
     setSoldParts((prev) => {
       if (prev.some((p) => p.part.id === part.id)) return prev; // evita duplicatas
-      return [...prev, { part, soldValue: 0, sellPrice: part.sellPrice || 0 }];
+      else if (!part.id) return prev;
+      return [...prev, { part, soldValue: 1, sellPrice: part.sellPrice || 0 }];
     });
     setOpenEditSheet(true);
   };
-
 
   const handleBaixa = async () => {
     if (soldParts.length === 0) {
@@ -135,7 +136,7 @@ export default function GraphicsPartsPage() {
           body: JSON.stringify({
             sold: (part.sold || 0) + soldValue,
             sellPrice,
-            userId
+            userId,
           }),
         });
         if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
@@ -152,7 +153,7 @@ export default function GraphicsPartsPage() {
             quantity: soldValue,
             totalPrice,
             profit,
-            userId
+            userId,
           }),
         });
 
@@ -162,7 +163,7 @@ export default function GraphicsPartsPage() {
           body: JSON.stringify({
             id: part.postId,
             sold: (part.postSold || 0) + soldValue,
-            userId
+            userId,
           }),
         });
 
@@ -206,7 +207,6 @@ export default function GraphicsPartsPage() {
       toast.error("⚠️ Falha ao criar item");
     }
   };
-
 
   // Calcular vendas e lucro agrupados por nome da parte
   const calculateSalesData = async () => {
@@ -398,7 +398,8 @@ export default function GraphicsPartsPage() {
           </Button>
           <h1 className="text-2xl font-bold">Produtos</h1>
           <Button onClick={handleOpenEditSheet} variant="outline">
-            <ShoppingCart className="mr-2 h-4 w-4" />
+           {soldParts.length > 0 && <Badge className="-mr-2 bg-red-500 text-[10px]">{soldParts.length}</Badge>}
+            <ShoppingCart className="mr-2 h-4 w-4 " />
           </Button>
         </div>
 
@@ -407,13 +408,13 @@ export default function GraphicsPartsPage() {
           userId={userId} // ✅ necessário
           parts={parts}
           handleOpenEditSheet={handleOpenEditSheet}
-          handleDeletePart={handleDeletePart} 
-          posts={[]} 
-          selectedPost={""} 
+          handleDeletePart={handleDeletePart}
+          posts={[]}
+          selectedPost={""}
           setSelectedPost={function (): void {
             throw new Error("Function not implemented.");
-          } }/>
-
+          }}
+        />
       </div>
 
       <div className="flex gap-2 mt-4">
@@ -457,7 +458,7 @@ export default function GraphicsPartsPage() {
             const updated = [...prev];
             const item = updated[index];
             if (!item) return updated;
-            item.soldValue = item.part.weight - (item.part.sold || 0);
+            item.soldValue = (item.part.weight - (item.part.sold ?? 0)) || 0;
             return updated;
           });
         }}
