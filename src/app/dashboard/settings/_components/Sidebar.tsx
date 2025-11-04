@@ -6,7 +6,6 @@ import {
   Layers,
   Package,
   Users,
-  Boxes,
   FileText,
 } from "lucide-react";
 import clsx from "clsx";
@@ -16,7 +15,6 @@ const tabs = [
   { id: "employees", name: "Funcionários", icon: Users },
   { id: "categories", name: "Categorias", icon: Layers },
   { id: "posts", name: "Posts", icon: Package },
-  { id: "parts", name: "Partes", icon: Boxes },
   { id: "patterns", name: "Padrões", icon: FileText },
 ];
 

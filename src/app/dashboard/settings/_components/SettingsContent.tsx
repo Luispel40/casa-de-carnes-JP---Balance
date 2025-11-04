@@ -24,8 +24,6 @@ export default function SettingsContent() {
         return <CategoriesForm />;
       case "posts":
         return <PostsForm />;
-      case "parts":
-        return <div>🧩 Formulário de Partes</div>;
       case "patterns":
         return <PatternsTable />;
       default:
@@ -40,7 +38,6 @@ export default function SettingsContent() {
         {activeTab === "employees" && "Funcionários"}
         {activeTab === "categories" && "Categorias"}
         {activeTab === "posts" && "Posts"}
-        {activeTab === "parts" && "Partes"}
         {activeTab === "patterns" && "Padrões"}
       </h1>
 
