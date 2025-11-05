@@ -324,7 +324,7 @@ export default function PartsTable({
       </div>
 
       {/* 🔹 Tabela */}
-      <div className="max-h-[240px] overflow-auto">
+      <div className="max-h-60 overflow-auto">
         <table className="min-w-full border border-gray-300 text-sm">
           <thead>
             <tr className="bg-gray-200 sticky top-0">

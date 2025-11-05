@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/_components/ui/card";
 import { useDataCache } from "_contexts/DataCacheContext";
+import { Checkbox } from "@/_components/ui/checkbox"; // Adicionado para melhor UX para Checkbox
 
 const FIELD_SCHEMAS: Record<
   string,
@@ -40,20 +41,15 @@ const FIELD_SCHEMAS: Record<
       label: "Título do Produto",
       placeholder: "Ex: Picanha Premium",
     },
-    { name: "price", label: "Preço", type: "number", placeholder: "Ex: 59.90" },
+    { name: "price", label: "Preço de Custo (R$)", type: "number", placeholder: "Ex: 59.90" },
     {
       name: "sellPrice",
-      label: "Preço de Venda",
+      label: "Preço de Venda (R$)",
       type: "number",
       placeholder: "Ex: 79.90",
     },
+    { name: "weight", label: "Peso (kg)", type: "number", placeholder: "Ex: 1.5" },
     { name: "isActive", label: "Disponível", type: "checkbox" },
-    {
-      name: "weight",
-      label: "Peso (kg)",
-      type: "number",
-      placeholder: "Ex: 1.5",
-    },
   ],
   patterns: [
     { name: "name", label: "Nome do Padrão", placeholder: "Ex: Corte Bovino" },
@@ -95,12 +91,27 @@ export default function SettingsPopup({
   const { categories, patterns, loading, fetchCategories, fetchPatterns } =
     useDataCache();
   const [selectedPattern, setSelectedPattern] = useState<any | null>(null);
-  const [parts, setParts] = useState<PartPayload[]>([
-    { name: "Quebra", percentage: 100, weight: 0 },
-  ]);
+  const [parts, setParts] = useState<PartPayload[]>(
+    type === "patterns" && initialData.parts
+      ? initialData.parts.concat({ name: "Quebra", percentage: 0, weight: 0 })
+      : [{ name: "Quebra", percentage: 100, weight: 0 }]
+  );
   const [loadingCategories, setLoadingCategories] = useState(false);
 
   const fields = FIELD_SCHEMAS[type] || [];
+  
+  // Filtra os campos para serem renderizados no fluxo principal
+  const primaryFields = fields.filter(f => 
+    !["price", "sellPrice", "weight", "isActive"].includes(f.name)
+  );
+
+  const priceFields = fields.filter(f => 
+    ["price", "sellPrice"].includes(f.name)
+  );
+
+  const weightField = fields.find(f => f.name === "weight");
+  const isActiveField = fields.find(f => f.name === "isActive");
+
 
   // 🔹 Buscar categorias e padrões
   useEffect(() => {
@@ -132,6 +143,8 @@ export default function SettingsPopup({
               weight: parseFloat(
                 ((numericWeight * p.percentage) / 100).toFixed(2)
               ),
+              price: initialData.price, // Manter o preço do post, se existir
+              sellPrice: initialData.sellPrice, // Manter o preço de venda do post
             }));
             setParts(generatedParts);
           } else {
@@ -139,18 +152,28 @@ export default function SettingsPopup({
               name: p.name,
               percentage: p.percentage,
               weight: p.weight ?? 0,
+              price: p.price ?? 0,
+              sellPrice: p.sellPrice ?? 0,
             }));
             setParts(generatedParts);
           }
         }
+      } else if (type === "patterns" && initialData.parts) {
+         // Recalcula quebra para o modo edit de patterns
+         const initialPartsWithoutBreak = initialData.parts.filter((p: any) => p.name.toLowerCase() !== "quebra");
+         const usedPercent = initialPartsWithoutBreak.reduce(
+            (acc: number, p: any) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+            0
+          );
+          setParts([...initialPartsWithoutBreak, { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 }]);
       }
       setLoadingCategories(false);
     };
 
     loadData();
-  }, [userId, type, initialData, patterns]);
+  }, [userId, type, initialData, patterns, fetchCategories, fetchPatterns]);
 
-  // 🔹 Funções de manipulação de partes
+  // 🔹 Funções de manipulação de partes (Patterns)
   const handleAddPart = () => {
     const usedPercent = parts
       .filter((p) => p.name.toLowerCase() !== "quebra")
@@ -165,9 +188,13 @@ export default function SettingsPopup({
       );
       return;
     }
+    
+    // Calcula a nova quebra antes de adicionar a nova parte
+    const newBreakPercentage = Math.max(0, 100 - usedPercent);
+    const partsWithoutBreak = parts.filter((p) => p.name.toLowerCase() !== "quebra");
 
     setParts([
-      ...parts.filter((p) => p.name.toLowerCase() !== "quebra"),
+      ...partsWithoutBreak,
       {
         name: "",
         percentage: 0,
@@ -176,7 +203,7 @@ export default function SettingsPopup({
         sellPrice: 0,
         isActive: true,
       },
-      { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 },
+      { name: "Quebra", percentage: newBreakPercentage, weight: 0 },
     ]);
   };
 
@@ -193,7 +220,7 @@ export default function SettingsPopup({
               [field]: ["percentage", "weight", "price", "sellPrice"].includes(
                 field
               )
-                ? parseFloat(value as string)
+                ? parseFloat(value as string) || 0 // Garante que seja número
                 : value,
             }
           : p
@@ -205,9 +232,11 @@ export default function SettingsPopup({
           (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
           0
         );
+      
+      const partsWithoutBreak = updated.filter((p) => p.name.toLowerCase() !== "quebra");
 
       return [
-        ...updated.filter((p) => p.name.toLowerCase() !== "quebra"),
+        ...partsWithoutBreak,
         {
           name: "Quebra",
           percentage: Math.max(0, 100 - usedPercent),
@@ -219,15 +248,18 @@ export default function SettingsPopup({
 
   const handleRemovePart = (index: number) => {
     setParts((prev) => {
-      const filtered = prev.filter(
+      // Remove a parte pelo índice (apenas se não for "Quebra")
+      const partsWithoutBreak = prev.filter(
         (_, i) => i !== index && _.name.toLowerCase() !== "quebra"
       );
-      const usedPercent = filtered.reduce(
+      
+      const usedPercent = partsWithoutBreak.reduce(
         (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
         0
       );
+      
       return [
-        ...filtered,
+        ...partsWithoutBreak,
         {
           name: "Quebra",
           percentage: Math.max(0, 100 - usedPercent),
@@ -250,15 +282,25 @@ export default function SettingsPopup({
 
       if (name === "weight" && selectedPattern) {
         const numericWeight = parseFloat(value) || 0;
+        
+        // Recalcula o peso das partes baseadas no novo peso total
         const updatedParts = selectedPattern.parts.map((p: any) => ({
           name: p.name,
           percentage: p.percentage,
           weight: parseFloat(((numericWeight * p.percentage) / 100).toFixed(2)),
-          price: parseFloat(formData.price) || 0,
-          sellPrice: parseFloat(formData.sellPrice) || 0,
+          price: parseFloat(prev.price) || 0,
+          sellPrice: parseFloat(prev.sellPrice) || 0,
           isActive: true,
         }));
         setParts(updatedParts);
+      }
+
+      // Se price ou sellPrice mudam, atualiza nos parts gerados
+      if (type === "number" && (name === "price" || name === "sellPrice") && selectedPattern) {
+        setParts(prevParts => prevParts.map(p => ({
+            ...p,
+            [name]: parseFloat(value) || 0
+        })));
       }
 
       return newData;
@@ -318,9 +360,14 @@ export default function SettingsPopup({
           price: parseFloat(formData.price) || 0,
           sellPrice: parseFloat(formData.sellPrice) || 0,
           percentage: 100,
-          isActive: true,
+          isActive: formData.isActive ?? true,
         },
       ];
+    }
+    
+    // Remove "Quebra" do payload final se for um post com padrão, já que é apenas visual
+    if (type === "posts" && selectedPattern) {
+        adjustedParts = parts.filter(p => p.name.toLowerCase() !== "quebra");
     }
 
     const quebraPart = adjustedParts.find(
@@ -332,10 +379,23 @@ export default function SettingsPopup({
         ? (formData.sold || 0) + (quebraPart?.weight ?? 0)
         : formData.sold || 0;
 
+    // Remove campos quebra/porcentagem se for salvar um post
+    const finalPartsPayload = 
+        type === "posts" 
+        ? adjustedParts.map(p => ({ 
+            name: p.name, 
+            weight: p.weight, 
+            price: p.price, 
+            sellPrice: p.sellPrice,
+            isActive: p.isActive 
+          }))
+        : adjustedParts; // Mantém % e quebra para patterns
+
     const payload = {
       ...formData,
-      sold: totalSold,
-      parts: adjustedParts,
+      // Se for posts e não tiver padrão, a quebra não existe.
+      sold: type === "posts" && !selectedPattern ? (formData.sold || 0) : totalSold,
+      parts: finalPartsPayload,
     };
 
     onSubmit(payload);
@@ -350,16 +410,26 @@ export default function SettingsPopup({
         formData.name
       ) || !formData.price || !formData.weight || !formData.categoryId;
     } else if (type === "patterns") {
-      return !formData.name || !formData.categoryId;
+      const totalPercent = parts.reduce(
+        (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+        0
+      );
+      // Verifica se o total de porcentagem é 100%
+      const isTotal100 = totalPercent >= 99.9 && totalPercent <= 100.1;
+      
+      // Verifica se todas as partes têm nome (exceto quebra)
+      const hasEmptyName = parts.some(p => p.name.toLowerCase() !== "quebra" && !p.name);
+
+      return !formData.name || !formData.categoryId || !isTotal100 || hasEmptyName;
     }
     return !formData.name;
   })();
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <Card className="w-full max-w-md bg-white shadow-2xl">
-        <CardHeader className="flex justify-between items-center">
-          <CardTitle className="capitalize">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-lg bg-white shadow-2xl max-h-[90vh] flex flex-col">
+        <CardHeader className="flex flex-row justify-between items-center pr-3">
+          <CardTitle className="capitalize text-xl">
             {mode === "edit" ? "Editar" : "Adicionar"}{" "}
             {type === "" ? "item" : type.slice(0, -1)}
           </CardTitle>
@@ -368,148 +438,224 @@ export default function SettingsPopup({
           </Button>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          {/* Campos principais */}
-          {fields.map((field) => (
+        <CardContent className="space-y-4 overflow-y-auto flex-1 pb-4"> {/* Adicionado overflow-y-auto */}
+          {/* Campos principais (gerais) */}
+          {primaryFields.map((field) => (
             <div key={field.name} className="flex flex-col">
               <label className="text-sm font-medium mb-1">{field.label}</label>
               <Input
                 name={field.name}
                 type={field.type || "text"}
                 placeholder={field.placeholder}
-                value={formData[field.name] || ""}
+                value={
+                    field.type === "checkbox" 
+                    ? formData[field.name] ?? false 
+                    : formData[field.name] ?? ""
+                }
                 onChange={handleChange}
                 disabled={field.name === "title" && selectedPattern}
               />
             </div>
           ))}
 
-          {/* Posts */}
+          {/* --------------------------- Posts --------------------------- */}
           {type === "posts" && (
             <>
+              {/* Campos de Seleção (Categoria/Padrão/Disponível) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* Categoria */}
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium mb-1">Categoria *</label>
+                  <NativeSelect
+                    name="categoryId"
+                    value={formData.categoryId || ""}
+                    onChange={handleChange}
+                  >
+                    <option value="">
+                      {loading && categories.length === 0
+                        ? "Carregando..."
+                        : "Selecione..."}
+                    </option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                
+                {/* Padrão */}
+                {patterns.length > 0 && (
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium mb-1">Padrão</label>
+                    <NativeSelect
+                      name="patternId"
+                      value={formData.patternId || ""}
+                      onChange={handlePatternSelect}
+                    >
+                      <option value="">Nenhum</option>
+                      {patterns.map((pattern: any) => (
+                        <option key={pattern.id} value={pattern.id}>
+                          {pattern.name}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </div>
+                )}
+
+                {/* Disponível (isActive) */}
+                {isActiveField && (
+                    <div className="flex items-end h-full pt-4">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={isActiveField.name} 
+                                name={isActiveField.name}
+                                checked={formData[isActiveField.name] ?? true}
+                                onCheckedChange={(checked) => handleChange({ 
+                                    target: { 
+                                        name: isActiveField.name, 
+                                        value: checked, 
+                                        type: 'checkbox' 
+                                    } 
+                                } as React.ChangeEvent<HTMLInputElement>)}
+                            />
+                            <label htmlFor={isActiveField.name} className="text-sm font-medium leading-none cursor-pointer">
+                                {isActiveField.label}
+                            </label>
+                        </div>
+                    </div>
+                )}
+              </div>
+              
+              {/* Campos de Valores (Preço/Venda/Peso) - Lado a Lado */}
+              <div className="grid grid-cols-2 gap-3">
+                {priceFields.map((field) => (
+                    <div key={field.name} className="flex flex-col">
+                        <label className="text-sm font-medium mb-1">{field.label}</label>
+                        <Input
+                            name={field.name}
+                            type={field.type || "text"}
+                            placeholder={field.placeholder}
+                            value={formData[field.name] || ""}
+                            onChange={handleChange}
+                        />
+                    </div>
+                ))}
+
+                {weightField && (
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium mb-1">{weightField.label} *</label>
+                        <Input
+                            name={weightField.name}
+                            type={weightField.type || "text"}
+                            placeholder={weightField.placeholder}
+                            value={formData[weightField.name] || ""}
+                            onChange={handleChange}
+                        />
+                    </div>
+                )}
+              </div>
+
+
+              {/* Partes Geradas (apenas visualização) */}
+              {selectedPattern && parts.length > 0 && (
+                <div className="border-t pt-3">
+                  <h4 className="text-base font-semibold mb-2">Detalhes das Partes:</h4>
+                  <div className="max-h-40 overflow-y-auto p-2 border rounded-md bg-gray-50 space-y-1">
+                    <ul className="text-sm">
+                      {parts.map((p, i) => (
+                        <li key={i} className="flex justify-between border-b last:border-b-0 py-1">
+                          <span className="font-medium">{p.name}</span> 
+                          <span className="text-gray-600">
+                            {p.percentage ? `${p.percentage}%` : ''} 
+                            {p.weight !== undefined && ` | ${p.weight}kg`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* --------------------------- Patterns --------------------------- */}
+          {type === "patterns" && (
+            <div className="space-y-3 border-t pt-3">
               <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Categoria</label>
+                <label className="text-sm font-medium mb-1">Categoria *</label>
                 <NativeSelect
                   name="categoryId"
                   value={formData.categoryId || ""}
                   onChange={handleChange}
                 >
                   <option value="">
-                    {loading && categories.length === 0
+                    {loadingCategories && categories.length === 0
                       ? "Carregando categorias..."
                       : "Selecione uma categoria"}
                   </option>
-                  {categories.map((cat) => (
+                  {categories.map((cat: any) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
                   ))}
                 </NativeSelect>
               </div>
+              
 
-              {patterns.length > 0 && (
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium mb-1">Padrão</label>
-                  <NativeSelect
-                    name="patternId"
-                    value={formData.patternId || ""}
-                    onChange={handlePatternSelect}
-                  >
-                    <option value="">Selecione um padrão</option>
-                    {patterns.map((pattern) => (
-                      <option key={pattern.id} value={pattern.id}>
-                        {pattern.name}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
-              )}
+              <h4 className="text-base font-semibold pt-2">Partes do Padrão (%)</h4>
+              
+              {/* Container de Scroll para Partes Dinâmicas */}
+              <div className="max-h-60 overflow-y-auto space-y-3 p-2 border rounded-md">
+                {parts.map((part, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Nome da parte"
+                      value={part.name}
+                      onChange={(e) =>
+                        handlePartChange(index, "name", e.target.value)
+                      }
+                      disabled={part.name.toLowerCase() === "quebra"}
+                    />
+                    <div className="flex items-center w-24">
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="%"
+                          value={part.percentage}
+                          disabled={part.name.toLowerCase() === "quebra"}
+                          onChange={(e) =>
+                            handlePartChange(index, "percentage", e.target.value)
+                          }
+                          className="pr-6"
+                        />
+                        <span className="absolute right-2 text-sm text-gray-500">%</span>
+                    </div>
 
-              {parts.length > 0 && (
-                <div className="border-t pt-3">
-                  <h4 className="text-sm font-medium mb-2">Partes Geradas:</h4>
-                  <ul className="space-y-1 text-sm">
-                    {parts.map((p, i) => (
-                      <li key={i}>
-                        {p.name}: {p.percentage}%{" "}
-                        {p.weight !== undefined && `→ ${p.weight}kg`}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          )}
-
-          <Button
-            className="w-full mt-4"
-            onClick={handleSubmit}
-            disabled={isSaveDisabled}
-          >
-            {mode === "edit" ? "Salvar alterações" : "Salvar"}
-          </Button>
-
-          {/* Patterns */}
-          {type === "patterns" && (
-            <div className="space-y-2 border-t pt-3">
-              <NativeSelect
-                name="categoryId"
-                value={formData.categoryId || ""}
-                onChange={handleChange}
-              >
-                <option value="">
-                  {loadingCategories && categories.length === 0
-                    ? "Carregando categorias..."
-                    : "Selecione uma categoria"}
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
+                    {part.name.toLowerCase() !== "quebra" ? (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemovePart(index)}
+                        className="shrink-0"
+                      >
+                        ✕
+                      </Button>
+                    ) : (
+                        <div className="w-10 shrink-0"></div> // Espaço vazio para alinhar
+                    )}
+                  </div>
                 ))}
-              </NativeSelect>
-
-              <h4 className="text-sm font-medium">Partes do Padrão (%)</h4>
-
-              {parts.map((part, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Nome da parte"
-                    value={part.name}
-                    onChange={(e) =>
-                      handlePartChange(index, "name", e.target.value)
-                    }
-                  />
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="%"
-                    value={part.percentage}
-                    disabled={part.name.toLowerCase() === "quebra"}
-                    onChange={(e) =>
-                      handlePartChange(index, "percentage", e.target.value)
-                    }
-                  />
-
-                  {part.name.toLowerCase() !== "quebra" && (
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleRemovePart(index)}
-                    >
-                      ✕
-                    </Button>
-                  )}
-                </div>
-              ))}
-
-              <div className="text-sm text-muted-foreground mt-1">
+              </div>
+              {/* Fim do Container de Scroll */}
+              
+              <div className="text-sm text-muted-foreground mt-1 font-medium">
                 Soma total:{" "}
                 {parts.reduce(
                   (acc, p) =>
                     acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
                   0
-                )}
+                ).toFixed(2)}
                 %
               </div>
 
@@ -523,6 +669,15 @@ export default function SettingsPopup({
               </Button>
             </div>
           )}
+          
+          {/* Botão de Salvar sempre no final */}
+          <Button
+            className="w-full sticky bottom-0 z-10" 
+            onClick={handleSubmit}
+            disabled={isSaveDisabled}
+          >
+            {mode === "edit" ? "Salvar alterações" : "Salvar"}
+          </Button>
         </CardContent>
       </Card>
     </div>

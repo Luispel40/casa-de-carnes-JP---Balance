@@ -70,7 +70,7 @@ export default function EditPartSheet({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // 🔹 Buscar partes disponíveis
+  // Buscar partes disponíveis
   useEffect(() => {
     async function fetchParts() {
       try {
@@ -95,9 +95,13 @@ export default function EditPartSheet({
     setSoldParts((prev) => [
       ...prev,
       {
-        part,
+        part: {
+          ...part,
+          weight: Number(part.weight) || 0,
+          sold: Number(part.sold) || 0,
+        },
         soldValue: 0,
-        sellPrice: part.sellPrice || 0,
+        sellPrice: Number(part.sellPrice) || 0,
       },
     ]);
     setIsPopoverOpen(false);
@@ -106,10 +110,12 @@ export default function EditPartSheet({
   const handleSoldChange = (index: number, value: number) => {
     setSoldParts((prev) => {
       const updated = [...prev];
-      const item = updated[index];
+      const item = { ...updated[index] };
       const maxAvailable = item.part.weight - (item.part.sold || 0);
 
-      if (value > maxAvailable) {
+      if (isNaN(value)) {
+        item.soldValue = 0;
+      } else if (value > maxAvailable) {
         toast.warning(`Máximo disponível: ${maxAvailable}kg`);
         item.soldValue = maxAvailable;
       } else if (value < 0) {
@@ -117,15 +123,17 @@ export default function EditPartSheet({
       } else {
         item.soldValue = value;
       }
-      return updated;
+
+      updated[index] = item;
+      return [...updated];
     });
   };
 
   const handleSellPriceChange = (index: number, value: number) => {
     setSoldParts((prev) => {
       const updated = [...prev];
-      updated[index].sellPrice = value;
-      return updated;
+      updated[index] = { ...updated[index], sellPrice: value };
+      return [...updated];
     });
   };
 
@@ -133,13 +141,12 @@ export default function EditPartSheet({
     setSoldParts((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // 🔹 Calcular total da venda
+  // Total geral
   const totalSale = soldParts.reduce(
-    (acc, item) => acc + item.soldValue * item.sellPrice,
+    (acc, item) => acc + (item.soldValue || 0) * (item.sellPrice || 0),
     0
   );
 
-  // 🔹 Confirmar venda
   const handleConfirmSale = async () => {
     if (!session?.user?.id) {
       toast.error("Usuário não autenticado.");
@@ -152,31 +159,21 @@ export default function EditPartSheet({
     }
 
     setIsConfirming(true);
-
     try {
-      const saleItems: {
-        partId: string;
-        name: string;
-        quantity: number;
-        sellPrice: number;
-        totalPrice: number;
-        profit: number;
-      }[] = [];
+      const saleItems: any[] = [];
+      const postSalesMap: Record<string, number> = {};
 
       for (const item of soldParts) {
         const { part, soldValue, sellPrice } = item;
+        const restante = part.weight - (part.sold || 0);
 
         if (soldValue <= 0) {
           toast.error(`Quantidade inválida para ${part.name}.`);
           setIsConfirming(false);
           return;
         }
-
-        const restante = part.weight - (part.sold || 0);
         if (soldValue > restante) {
-          toast.error(
-            `Você não pode vender mais que ${restante}kg de ${part.name}.`
-          );
+          toast.error(`Você não pode vender mais que ${restante}kg de ${part.name}.`);
           setIsConfirming(false);
           return;
         }
@@ -204,7 +201,6 @@ export default function EditPartSheet({
           profit,
         });
 
-        // Registra venda individual
         await fetch(`/api/sales`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -216,15 +212,19 @@ export default function EditPartSheet({
           }),
         });
 
-        // Corrigido: Atualiza post pai corretamente
-        await fetch(`/api/posts/${part.postId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sold: (part.postSold || 0) + soldValue,
-          }),
-        });
+        // Soma vendida no post pai
+        if (!postSalesMap[part.postId]) postSalesMap[part.postId] = 0;
+        postSalesMap[part.postId] += soldValue;
       }
+
+      // Atualiza posts pai
+      for (const postId of Object.keys(postSalesMap)) {
+  await fetch("/api/posts/updateSold", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId }),
+  });
+}
 
       // Cria nota de venda
       const notaRes = await fetch("/api/salenotes", {
@@ -256,12 +256,10 @@ export default function EditPartSheet({
       <SheetContent className="px-6 flex flex-col max-h-screen">
         <SheetHeader>
           <SheetTitle>Editar Vendas de Partes</SheetTitle>
-          <SheetDescription>
-            Adicione e ajuste as partes vendidas.
-          </SheetDescription>
+          <SheetDescription>Adicione e ajuste as partes vendidas.</SheetDescription>
         </SheetHeader>
 
-        {/* 🔹 Adicionar parte e total */}
+        {/* Adicionar Parte + Total */}
         <div className="mb-4 flex justify-between items-center">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
@@ -284,91 +282,82 @@ export default function EditPartSheet({
                       </CommandItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">
-                      Nenhum resultado
-                    </div>
+                    <div className="p-2 text-sm text-gray-500">Nenhum resultado</div>
                   )}
                 </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
-
           <span className="text-gray-700 font-semibold">
             Total: {formatCurrency(totalSale)}
           </span>
         </div>
 
-        {/* 🔹 Lista de partes */}
+        {/* Lista de Partes */}
         <div className="flex-1 overflow-y-auto border rounded-md max-h-[60vh] p-2 space-y-4">
-          {soldParts.length === 0 && (
-            <div className="text-center py-6 text-gray-500">
-              Nenhuma parte adicionada.
-            </div>
-          )}
+          {soldParts.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">Nenhuma parte adicionada.</div>
+          ) : (
+            soldParts.map((item, i) => {
+              const disponivel = item.part.weight - (item.part.sold ?? 0);
+              return (
+                <div key={i} className="border p-3 rounded-md flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <strong>{item.part.name}</strong>
+                    <Button size="icon-sm" variant="ghost" onClick={() => handleRemovePart(i)}>
+                      ✕
+                    </Button>
+                  </div>
 
-          {soldParts.map((item, i) => {
-            const disponivel = (Number(item.part.weight) - (item.part.sold ?? 0));
-            return (
-              <div key={i} className="border p-3 rounded-md flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <strong>{item.part.name}</strong>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => handleRemovePart(i)}
-                  >
-                    ✕
-                  </Button>
-                </div>
+                  <div className="flex flex-wrap gap-2 items-end">
+                    <div className="flex-1">
+                      <Label>Quantidade vendida (kg)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={disponivel}
+                        value={item.soldValue || ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? 0 : Number(e.target.value);
+                          handleSoldChange(i, val);
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Disponível: {disponivel}kg
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mb-1"
+                      onClick={() => fillAllRemaining(i)}
+                    >
+                      Tudo
+                    </Button>
+                  </div>
 
-                <div className="flex flex-wrap gap-2 items-end">
-                  <div className="flex-1">
-                    <Label>Quantidade vendida (kg)</Label>
+                  <div>
+                    <Label>Preço de venda (R$)</Label>
                     <Input
                       type="number"
-                      min={0}
-                      max={disponivel}
-                      value={item.soldValue ?? 0}
+                      value={item.sellPrice}
                       onChange={(e) =>
-                        handleSoldChange(i, Number(e.target.value))
+                        handleSellPriceChange(i, Number(e.target.value))
                       }
+                      disabled
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Disponível: {disponivel}kg
-                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mb-1"
-                    onClick={() => fillAllRemaining(i)}
-                  >
-                    Tudo
-                  </Button>
-                </div>
 
-                <div>
-                  <Label>Preço de venda (R$)</Label>
-                  <Input
-                    type="number"
-                    value={item.sellPrice}
-                    onChange={(e) =>
-                      handleSellPriceChange(i, Number(e.target.value))
-                    }
-                    disabled
-                  />
+                  <p className="text-sm font-medium text-right mt-2">
+                    Subtotal: {formatCurrency(item.soldValue * item.sellPrice || 0)}
+                  </p>
                 </div>
-
-                <p className="text-sm font-medium text-right mt-2">
-                  Subtotal:{" "}
-                  {formatCurrency(item.soldValue * item.sellPrice || 0)}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
-        {/* 🔹 Rodapé */}
+        {/* Rodapé */}
         <SheetFooter className="mt-4 sticky bottom-0 bg-white border-t pt-3 flex justify-between">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancelar
@@ -388,26 +377,21 @@ export default function EditPartSheet({
               <DialogHeader>
                 <DialogTitle>Confirmar venda</DialogTitle>
               </DialogHeader>
-
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Confirme a baixa das partes selecionadas:
                 </p>
-
                 <ul className="list-disc list-inside text-sm text-muted-foreground">
                   {soldParts.map((p, i) => (
                     <li key={i}>
-                      {p.soldValue}kg de {p.part.name} por{" "}
-                      {formatCurrency(p.sellPrice)}
+                      {p.soldValue}kg de {p.part.name} por {formatCurrency(p.sellPrice)}
                     </li>
                   ))}
                 </ul>
-
                 <div className="mt-2 font-semibold">
                   Total: {formatCurrency(totalSale)}
                 </div>
               </div>
-
               <div className="flex justify-end gap-2 mt-4">
                 <DialogClose asChild>
                   <Button onClick={handleConfirmSale} disabled={isConfirming}>
