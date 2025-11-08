@@ -492,7 +492,7 @@ export default function PostsForm() {
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <Input placeholder="Peso (kg)" name="weight" type="number" step="0.01" value={form.weight ?? ""} onChange={handleChange} />
+              <Input placeholder="Adicione mais peso" name="weight" type="number" step="0.01" value={""} onChange={handleChange} />
               <Input placeholder="Preço base (R$)" name="price" type="number" step="0.01" value={form.price ?? ""} onChange={handleChange} />
               <Input placeholder="Preço de venda (R$)" name="sellPrice" type="number" step="0.01" value={form.sellPrice ?? ""} onChange={handleChange} />
             </div>
