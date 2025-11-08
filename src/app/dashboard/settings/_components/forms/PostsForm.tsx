@@ -8,8 +8,19 @@ import { Card, CardContent } from "@/_components/ui/card";
 import { Switch } from "@/_components/ui/switch";
 import { Label } from "@/_components/ui/label";
 import { toast } from "sonner";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/_components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/_components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/_components/ui/select";
 
+// --- Interfaces ---
 interface Category {
   id: string;
   name: string;
@@ -25,7 +36,7 @@ interface Pattern {
   id: string;
   name: string;
   parts: PatternPart[];
-  categoryId: string; // Adicionado
+  categoryId: string;
 }
 
 interface PostPart {
@@ -34,7 +45,6 @@ interface PostPart {
   percentage: number;
   weight: number;
   price?: number;
-  sellPrice?: number;
   isActive?: boolean;
 }
 
@@ -52,6 +62,8 @@ interface Post {
   parts?: PostPart[];
 }
 
+const MARGIN_PERCENTAGE = 0.40; // 40% de margem padrão
+
 export default function PostsForm() {
   const { data: session } = useSession();
   const userId = session?.user?.id;
@@ -61,106 +73,140 @@ export default function PostsForm() {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
   const [parts, setParts] = useState<PostPart[]>([]);
+  const [alreadyExists, setAlreadyExists] = useState(false);
+  const [originalPost, setOriginalPost] = useState<Post | null>(null);
 
   const [form, setForm] = useState({
     id: "",
     title: "",
     weight: "",
     price: "",
-    sellPrice: "",
     categoryId: "",
     patternId: "",
     isActive: true,
   });
 
-  // ==============================
-  // 🔹 Fetch Data (Mantido)
-  // ==============================
-  const fetchPosts = async () => {
+  // --- Helpers ---
+  const calculatePartsFromPattern = (pattern: Pattern, weight: number, price: number): PostPart[] => {
+    const newParts = pattern.parts.map(p => ({
+      name: p.name,
+      percentage: p.percentage,
+      weight: parseFloat(((weight * p.percentage) / 100).toFixed(2)),
+      price,
+      isActive: true,
+    }));
+    const usedPercent = newParts.reduce((sum, p) => sum + p.percentage, 0);
+    if (usedPercent < 100) {
+      newParts.push({
+        name: "Quebra",
+        percentage: parseFloat((100 - usedPercent).toFixed(2)),
+        weight: parseFloat(((weight * (100 - usedPercent)) / 100).toFixed(2)),
+        price: 0,
+        isActive: true,
+      });
+    }
+    return newParts;
+  };
+
+  const mergeParts = (existingParts: PostPart[], newParts: PostPart[], numericWeight: number, numericPrice: number): PostPart[] => {
+    const mergedParts: PostPart[] = [...existingParts];
+
+    newParts.forEach(p => {
+      const match = mergedParts.find(mp => mp.name.toLowerCase() === p.name.toLowerCase());
+      if (match) {
+        match.weight += p.weight;
+        match.price = numericPrice; // sempre sobrescreve o price
+      } else {
+        mergedParts.push({ ...p, price: numericPrice });
+      }
+    });
+
+    const totalWeight = mergedParts.reduce((sum, p) => sum + p.weight, 0);
+    return mergedParts.map(p => ({
+      ...p,
+      percentage: parseFloat(((p.weight / totalWeight) * 100).toFixed(2)),
+      price: numericPrice,
+    }));
+  };
+
+  const resetForm = useCallback(() => {
+    setForm({
+      id: "",
+      title: "",
+      weight: "",
+      price: "",
+      categoryId: "",
+      patternId: "",
+      isActive: true,
+    });
+    setParts([]);
+    setSelectedPattern(null);
+    setAlreadyExists(false);
+    setOriginalPost(null);
+  }, []);
+
+  // --- Fetches ---
+  const fetchPosts = useCallback(async () => {
     if (!userId) return;
     try {
-        const res = await fetch(`/api/posts/${userId}`);
-        const data = await res.json();
-        setPosts(data);
+      const res = await fetch(`/api/posts/${userId}`);
+      const data = await res.json();
+      setPosts(data);
     } catch (e) {
-        console.error("Erro ao buscar posts:", e);
+      console.error("Erro ao buscar posts:", e);
     }
-  };
+  }, [userId]);
 
   const fetchCategories = async () => {
     if (!userId) return;
     try {
-        const res = await fetch(`/api/categories/${userId}`);
-        const data = await res.json();
-        setCategories(data);
+      const res = await fetch(`/api/categories/${userId}`);
+      const data = await res.json();
+      setCategories(data);
     } catch (e) {
-        console.error("Erro ao buscar categorias:", e);
+      console.error("Erro ao buscar categorias:", e);
     }
   };
 
   const fetchPatterns = async () => {
     if (!userId) return;
     try {
-        const res = await fetch(`/api/patterns/${userId}`);
-        const data = await res.json();
-        setPatterns(data);
+      const res = await fetch(`/api/patterns/${userId}`);
+      const data = await res.json();
+      setPatterns(data);
     } catch (e) {
-        console.error("Erro ao buscar padrões:", e);
+      console.error("Erro ao buscar padrões:", e);
     }
   };
 
   useEffect(() => {
     if (userId) {
-        fetchPosts();
-        fetchCategories();
-        fetchPatterns();
+      fetchPosts();
+      fetchCategories();
+      fetchPatterns();
     }
-  }, [userId]);
+  }, [userId, fetchPosts]);
 
-  // ==============================
-  // 🔹 Pattern Selection (Atualizado: Preenche Título e Categoria se for novo post)
-  // ==============================
+  // --- Handlers ---
   const handlePatternSelect = (patternId: string) => {
     let nextForm = { ...form, patternId };
     let selected: Pattern | null = null;
     let newParts: PostPart[] = [];
 
     if (patternId) {
-      const pattern = patterns.find((p) => p.id === patternId);
+      const pattern = patterns.find(p => p.id === patternId);
       if (pattern) {
         selected = pattern;
-
-        // NOVO: Se for um novo post, preenche Título e Categoria com o Padrão
         if (!form.id) {
-            nextForm = {
-                ...nextForm,
-                title: pattern.name,
-                categoryId: pattern.categoryId || nextForm.categoryId,
-            };
+          nextForm = {
+            ...nextForm,
+            title: pattern.name,
+            categoryId: pattern.categoryId || nextForm.categoryId,
+          };
         }
-
         const numericWeight = parseFloat(nextForm.weight) || 0;
-        newParts = pattern.parts.map((p) => ({
-          name: p.name,
-          percentage: p.percentage,
-          weight: parseFloat(((numericWeight * p.percentage) / 100).toFixed(2)),
-          price: parseFloat(nextForm.price) || 0,
-          sellPrice: parseFloat(nextForm.sellPrice) || 0,
-          isActive: true,
-        }));
-
-        // Parte "Quebra"
-        const usedPercent = newParts.reduce((acc, p) => acc + p.percentage, 0);
-        if (usedPercent < 100) {
-          newParts.push({
-            name: "Quebra",
-            percentage: parseFloat((100 - usedPercent).toFixed(2)),
-            weight: parseFloat(((numericWeight * (100 - usedPercent)) / 100).toFixed(2)),
-            price: 0,
-            sellPrice: 0,
-            isActive: true,
-          });
-        }
+        const numericPrice = parseFloat(nextForm.price) || 0;
+        newParts = calculatePartsFromPattern(pattern, numericWeight, numericPrice);
       }
     }
 
@@ -169,278 +215,193 @@ export default function PostsForm() {
     setParts(newParts);
   };
 
-  // ==============================
-  // 🔹 Input Changes (Atualizado: Bloqueia inputs se for novo post baseado em padrão)
-  // ==============================
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
-    const isCheckbox = type === "checkbox";
-    const newValue = isCheckbox ? (e.target as HTMLInputElement).checked : value;
+    const newValue = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
 
-    // NOVO: Previne alteração manual de Title/Category se o post for novo e baseado em padrão.
-    const isPatternBasedNewPost = !!selectedPattern && !form.id;
-    if (isPatternBasedNewPost && (name === 'title' || name === 'categoryId')) {
-        return;
-    }
+    const isEditing = !!form.id;
+    const isPatternBasedNewPost = !!selectedPattern && !isEditing;
+
+    if ((isPatternBasedNewPost && (name === "title" || name === "categoryId")) || (isEditing && name === "categoryId")) return;
+    if (alreadyExists && name === "title") return;
 
     setForm({ ...form, [name]: newValue });
 
-    // recalcular partes ao alterar peso
-    if (name === "weight" && selectedPattern) {
+    if (name === "weight" && selectedPattern && !isEditing) {
       const numericWeight = parseFloat(value) || 0;
-      const updatedParts: PostPart[] = selectedPattern.parts.map((p) => ({
-        name: p.name,
-        percentage: p.percentage,
-        weight: parseFloat(((numericWeight * p.percentage) / 100).toFixed(2)),
-        price: parseFloat(form.price) || 0,
-        sellPrice: parseFloat(form.sellPrice) || 0,
-        isActive: true,
-      }));
+      const numericPrice = parseFloat(form.price) || 0;
+      setParts(calculatePartsFromPattern(selectedPattern, numericWeight, numericPrice));
+    }
 
-      const usedPercent = updatedParts.reduce((acc, p) => acc + p.percentage, 0);
-      if (usedPercent < 100) {
-        updatedParts.push({
-          name: "Quebra",
-          percentage: parseFloat((100 - usedPercent).toFixed(2)),
-          weight: parseFloat(((numericWeight * (100 - usedPercent)) / 100).toFixed(2)),
-          price: 0,
-          sellPrice: 0,
-          isActive: true,
-        });
-      }
-
-      setParts(updatedParts);
+    // Sempre atualizar o price das parts ao mudar o form.price
+    if (name === "price") {
+      const numericPrice = parseFloat(value) || 0;
+      setParts(prevParts => prevParts.map(p => ({ ...p, price: numericPrice })));
     }
   };
 
-  // ==============================
-  // 🔹 Part Editing (Mantido com correção da Quebra)
-  // ==============================
+  const handleTitleSelect = (newTitle: string) => {
+    setForm(prev => ({ ...prev, title: newTitle }));
+  };
+
   const handlePartChange = (index: number, field: keyof PostPart, value: any) => {
     const updated = parts.map((p, i) =>
       i === index ? { ...p, [field]: field === "percentage" ? parseFloat(value) : value } : p
     );
 
-    // Atualiza parte "Quebra" com base na soma das porcentagens das outras partes.
-    const usedPercent = updated.filter((p) => p.name.toLowerCase() !== "quebra")
-      .reduce((acc, p) => acc + (p.percentage || 0), 0);
-
-    const filtered = updated.filter((p) => p.name.toLowerCase() !== "quebra");
     const numericWeight = parseFloat(form.weight) || 0;
-
+    const usedPercent = updated.filter(p => p.name.toLowerCase() !== "quebra").reduce((acc, p) => acc + (p.percentage || 0), 0);
     const remainingPercent = Math.max(0, 100 - usedPercent);
-    const remainingWeight = (remainingPercent / 100) * numericWeight;
+    const filtered = updated.filter(p => p.name.toLowerCase() !== "quebra");
 
     if (remainingPercent > 0) {
-        filtered.push({ 
-            name: "Quebra", 
-            percentage: parseFloat(remainingPercent.toFixed(2)), 
-            weight: parseFloat(remainingWeight.toFixed(2)), 
-            price: 0, 
-            sellPrice: 0, 
-            isActive: true
-        });
+      filtered.push({
+        name: "Quebra",
+        percentage: parseFloat(remainingPercent.toFixed(2)),
+        weight: parseFloat(((remainingPercent / 100) * numericWeight).toFixed(2)),
+        price: parseFloat(form.price) || 0,
+        isActive: true,
+      });
     }
-    
+
     setParts(filtered);
   };
 
-  // ==============================
-  // 🔹 Submit com merge de posts (Mantido)
-  // ==============================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.title || !form.weight || !form.price || !form.categoryId) {
-        toast.error("Preencha todos os campos obrigatórios");
-        return;
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
     }
 
     const numericWeight = parseFloat(form.weight);
     const numericPrice = parseFloat(form.price);
-    const numericSellPrice = parseFloat(form.sellPrice) || 0;
+    const sellPrice = parseFloat((numericPrice * (1 + MARGIN_PERCENTAGE)).toFixed(2));
 
-    // 🔹 Cria partes do form
     let adjustedParts: PostPart[] = parts.length
-        ? parts
-        : [
-            {
-                name: form.title,
-                weight: numericWeight,
-                price: numericPrice,
-                sellPrice: numericSellPrice,
-                isActive: true,
-                percentage: 100,
-            },
-        ];
+      ? parts.map(p => ({ ...p, price: numericPrice })) // garante que todas as parts recebam o price do form
+      : [{ name: form.title, weight: numericWeight, price: numericPrice, percentage: 100, isActive: true }];
 
-    // 🔹 Checa se post já existe
-    const existing = posts.find((p) => p.title.toLowerCase() === form.title.toLowerCase());
-
-    if (existing) {
-        // --- 🔄 MERGE COM POST EXISTENTE ---
-        const mergedWeight = existing.weight + numericWeight;
-        const mergedPrice =
-            (existing.price * existing.weight + numericPrice * numericWeight) /
-            mergedWeight;
-        const mergedSellPrice =
-            ((existing.sellPrice ?? 0) * existing.weight +
-                numericSellPrice * numericWeight) /
-            mergedWeight;
-
-        // --- 🔄 MERGE DAS PARTES ---
-        const mergedParts: PostPart[] = [...(existing.parts ?? [])];
-
-        adjustedParts.forEach((p) => {
-            const match = mergedParts.find((mp) => mp.name === p.name);
-            if (match) {
-                const newWeight = match.weight + (p.weight || 0); // Adicionado (p.weight || 0) por segurança
-                match.price =
-                    ((match.price ?? 0) * match.weight + (p.price ?? 0) * (p.weight || 0)) /
-                    newWeight;
-                match.sellPrice =
-                    ((match.sellPrice ?? 0) * match.weight +
-                        (p.sellPrice ?? 0) * (p.weight || 0)) /
-                    newWeight;
-                match.weight = newWeight;
-            } else {
-                mergedParts.push(p);
-            }
-        });
-
-        // --- 🔄 PUT para atualizar post existente ---
-        const res = await fetch(`/api/posts/${userId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                id: existing.id,
-                title: existing.title,
-                weight: mergedWeight,
-                price: mergedPrice,
-                sellPrice: mergedSellPrice,
-                categoryId: form.categoryId,
-                isActive: form.isActive,
-                userId,
-                parts: mergedParts,
-            }),
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            console.error("Erro ao atualizar post:", err);
-            return toast.error("Erro ao atualizar post");
+    // --- Editar existente ---
+    if (form.id && originalPost) {
+      const updatedParts = adjustedParts.map(p => {
+        if (p.name.toLowerCase() !== "quebra") {
+          return { ...p, weight: numericWeight * (p.percentage / 100), price: numericPrice };
         }
+        const totalOtherWeight = adjustedParts.filter(ap => ap.name.toLowerCase() !== "quebra").reduce((sum, ap) => sum + ap.weight, 0);
+        return { ...p, weight: numericWeight - totalOtherWeight, price: numericPrice };
+      });
 
-        toast.success("Post atualizado com merge!");
-    } else {
-        // --- 🆕 POST novo ---
-        const res = await fetch(`/api/posts/${userId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title: form.title,
-                weight: numericWeight,
-                price: numericPrice,
-                sellPrice: numericSellPrice,
-                categoryId: form.categoryId,
-                isActive: form.isActive,
-                userId,
-                parts: adjustedParts,
-            }),
-        });
+      const res = await fetch(`/api/posts/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: form.id,
+          title: form.title,
+          weight: numericWeight,
+          price: numericPrice,
+          sellPrice,
+          categoryId: form.categoryId,
+          isActive: form.isActive,
+          userId,
+          parts: updatedParts,
+        }),
+      });
 
-        if (!res.ok) {
-            const err = await res.json();
-            console.error("Erro ao criar post:", err);
-            return toast.error("Erro ao criar post");
-        }
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Erro ao salvar edição do post:", err);
+        return toast.error("Erro ao salvar edição do post");
+      }
 
-        toast.success("Post criado!");
+      toast.success(`Post "${form.title}" editado com sucesso!`);
+      resetForm();
+      fetchPosts();
+      return;
     }
 
-    // 🔁 Reset form
-    setForm({
-        id: "", title: "", weight: "", price: "", sellPrice: "", categoryId: "", patternId: "", isActive: true,
+    // --- Merge em existente com padrão ---
+    const existingPost = posts.find(p => p.title.toLowerCase() === form.title.toLowerCase());
+    if (existingPost && selectedPattern) {
+      const newWeight = existingPost.weight + numericWeight;
+      const mergedParts = mergeParts(existingPost.parts ?? [], adjustedParts, numericWeight, numericPrice);
+
+      const res = await fetch(`/api/posts/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: existingPost.id,
+          title: existingPost.title,
+          weight: newWeight,
+          price: numericPrice,
+          sellPrice,
+          categoryId: form.categoryId,
+          isActive: form.isActive,
+          userId,
+          parts: mergedParts,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Erro ao atualizar post:", err);
+        return toast.error("Erro ao atualizar post");
+      }
+
+      toast.success(`Post "${existingPost.title}" atualizado: Peso do padrão somado!`);
+      resetForm();
+      fetchPosts();
+      return;
+    }
+
+    // --- Criar novo ---
+    const res = await fetch(`/api/posts/${userId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: form.title,
+        weight: numericWeight,
+        price: numericPrice,
+        sellPrice,
+        categoryId: form.categoryId,
+        isActive: form.isActive,
+        userId,
+        parts: adjustedParts,
+      }),
     });
-    setParts([]);
-    setSelectedPattern(null);
+
+    if (!res.ok) {
+      const err = await res.json();
+      console.error("Erro ao criar post:", err);
+      return toast.error("Erro ao criar post");
+    }
+
+    toast.success("Post criado!");
+    resetForm();
     fetchPosts();
-};
+  };
 
-  // ==============================
-  // 🔹 Editar (Atualizado: Lógica de Redistribuição de Peso)
-  // ==============================
   const handleEdit = (post: Post) => {
-    // 1. Seta o formulário
+    setOriginalPost(post);
     setForm({
-        id: post.id,
-        title: post.title,
-        weight: String(post.weight),
-        price: String(post.price),
-        sellPrice: post.sellPrice ? String(post.sellPrice) : "",
-        categoryId: post.categoryId,
-        patternId: post.patternId || "",
-        isActive: post.isActive,
+      id: post.id,
+      title: post.title,
+      weight: String(post.weight),
+      price: String(post.price),
+      categoryId: post.categoryId,
+      patternId: post.patternId || "",
+      isActive: post.isActive,
     });
+    setAlreadyExists(false);
 
-    let partsToSet = post.parts || [];
     let selected: Pattern | null = null;
-
     if (post.patternId) {
-        const pattern = patterns.find((p) => p.id === post.patternId);
-        if (pattern) {
-            selected = pattern;
-
-            // NOVO: Lógica de Redistribuição de Peso se o Título do Post for igual ao Nome do Padrão
-            if (post.title.toLowerCase() === pattern.name.toLowerCase()) {
-                const numericWeight = post.weight;
-                const patternPartMap = new Map(pattern.parts.map(p => [p.name.toLowerCase(), p]));
-
-                const updatedParts: PostPart[] = [];
-                
-                // 1. Atualiza partes existentes que também estão no padrão
-                for (const postPart of partsToSet) {
-                    const patternPart = patternPartMap.get(postPart.name.toLowerCase());
-                    
-                    if (patternPart) {
-                        // Recalcula peso e seta nova porcentagem do padrão
-                        const newWeight = (patternPart.percentage / 100) * numericWeight;
-                        
-                        updatedParts.push({
-                            ...postPart,
-                            weight: parseFloat(newWeight.toFixed(2)),
-                            percentage: patternPart.percentage,
-                        });
-                    } else if (postPart.name.toLowerCase() !== "quebra") {
-                        // Mantém partes que não estão no padrão (exceto "Quebra")
-                        updatedParts.push(postPart);
-                    }
-                }
-                
-                // 2. Garante que "Quebra" é o último e tem o restante da porcentagem
-                const totalExistingPercent = updatedParts.reduce((acc, p) => acc + (p.percentage || 0), 0);
-                const remainingPercent = 100 - totalExistingPercent;
-                const remainingWeight = (remainingPercent / 100) * numericWeight;
-                
-                // Adiciona Quebra recalculada
-                if (remainingPercent > 0) {
-                    updatedParts.push({
-                        name: "Quebra",
-                        percentage: parseFloat(remainingPercent.toFixed(2)),
-                        weight: parseFloat(remainingWeight.toFixed(2)),
-                        price: 0,
-                        sellPrice: 0,
-                        isActive: true,
-                    });
-                }
-
-                partsToSet = updatedParts;
-            }
-            setSelectedPattern(pattern);
-        }
+      const pattern = patterns.find(p => p.id === post.patternId);
+      if (pattern) selected = pattern;
     }
 
-    setParts(partsToSet);
+    setSelectedPattern(selected);
+    setParts(post.parts?.map(p => ({ ...p, price: parseFloat(form.price) })) ?? []);
   };
 
   const handleDelete = async (id: string) => {
@@ -449,59 +410,117 @@ export default function PostsForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (res.ok) {
-      toast.success("Post excluído com sucesso");
-      fetchPosts();
-      
-    } else {
-      toast.error("Erro ao excluir post");
-    }
-    setPosts((prev) => prev.filter((p) => p.id !== id));
+    if (res.ok) toast.success("Post excluído com sucesso");
+    else toast.error("Erro ao excluir post");
+    setPosts(prev => prev.filter(p => p.id !== id));
   };
 
-  const isPatternBasedNewPost = useMemo(() => !!selectedPattern && !form.id, [selectedPattern, form.id]);
+  const isEditing = !!form.id;
+  const isPatternBasedNewPost = useMemo(() => !!selectedPattern && !isEditing, [selectedPattern, isEditing]);
 
-  // ==============================
-  // 🔹 Render (Atualizado: Adiciona disabled aos inputs)
-  // ==============================
+  const uniqueTitles = useMemo(() => {
+    const names = new Set<string>();
+    posts.forEach(post => {
+      names.add(post.title);
+      post.parts?.forEach(part => {
+        if (part.name.toLowerCase() !== 'quebra') names.add(part.name);
+      });
+    });
+    if (form.id) names.delete(form.title);
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [posts, form.id, form.title]);
+
+  // --- JSX (mantido igual) ---
   return (
     <div className="flex flex-col gap-6">
+      {/* Formulário */}
       <Card>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Input 
-                placeholder="Título" 
-                name="title" 
-                value={form.title ?? ""} 
-                onChange={handleChange} 
-                disabled={isPatternBasedNewPost} // NOVO: Desativa se for novo post baseado em padrão
+            {/* Switch Produto Existente */}
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={alreadyExists}
+                onCheckedChange={(val) => {
+                  setAlreadyExists(val);
+                  if (val) {
+                    setForm(prev => ({ ...prev, title: "" }));
+                    setSelectedPattern(null);
+                  }
+                }}
+                disabled={isEditing || isPatternBasedNewPost}
               />
+              <Label>Produto/Peça já existe?</Label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {alreadyExists && !isEditing ? (
+                <Select value={form.title} onValueChange={handleTitleSelect}>
+                  <SelectTrigger disabled={isEditing}>
+                    <SelectValue placeholder="Selecione um produto/peça existente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniqueTitles.map(title => (
+                      <SelectItem key={title} value={title}>{title}</SelectItem>
+                    ))}
+                    {uniqueTitles.length === 0 && (
+                      <SelectItem disabled value="NenhumItem">Nenhum produto/peça encontrado</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  placeholder="Título (Nome do produto/peça)"
+                  name="title"
+                  value={form.title ?? ""}
+                  onChange={handleChange}
+                  disabled={isPatternBasedNewPost || isEditing}
+                />
+              )}
+
               <select
                 name="categoryId"
                 value={form.categoryId || ""}
                 onChange={handleChange}
                 className="border rounded-md px-2 py-1"
-                disabled={isPatternBasedNewPost} // NOVO: Desativa se for novo post baseado em padrão
+                disabled={isPatternBasedNewPost || isEditing}
               >
                 <option value="">Selecione a categoria</option>
-                {categories.map((cat) => (
+                {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <Input placeholder="Adicione mais peso" name="weight" type="number" step="0.01" value={""} onChange={handleChange} />
-              <Input placeholder="Preço base (R$)" name="price" type="number" step="0.01" value={form.price ?? ""} onChange={handleChange} />
-              <Input placeholder="Preço de venda (R$)" name="sellPrice" type="number" step="0.01" value={form.sellPrice ?? ""} onChange={handleChange} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                placeholder={isEditing ? "Adicionar Peso (Kg) à Soma" : "Peso Inicial (Kg)"}
+                name="weight"
+                type="number"
+                step="0.01"
+                value={form.weight ?? ""}
+                onChange={handleChange}
+              />
+              <Input
+                placeholder={isEditing ? "Novo Preço Base (R$/Kg)" : "Preço Base (R$/Kg)"}
+                name="price"
+                type="number"
+                step="0.01"
+                value={form.price ?? ""}
+                onChange={handleChange}
+              />
             </div>
 
             <div className="flex flex-col">
-              <Label>Padrão</Label>
-              <select value={form.patternId || ""} onChange={(e) => handlePatternSelect(e.target.value)} className="border rounded-md px-2 py-1">
+              <Label>Padrão de Peças</Label>
+              <select
+                value={form.patternId || ""}
+                onChange={(e) => handlePatternSelect(e.target.value)}
+                className="border rounded-md px-2 py-1"
+                disabled={alreadyExists || isEditing}
+              >
                 <option value="">Sem padrão</option>
-                {patterns.map((p) => (
+                {patterns.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
@@ -509,44 +528,45 @@ export default function PostsForm() {
 
             {parts.length > 0 && (
               <div className="space-y-2 border-t pt-3">
-                <Label>Partes do Produto</Label>
+                <Label>Partes do Produto ({form.weight} kg)</Label>
                 {parts.map((part, i) => (
                   <div key={i} className="grid grid-cols-3 gap-2 items-center">
-                    <Input value={part.name ?? ""} onChange={(e) => handlePartChange(i, "name", e.target.value)} disabled={part.name.toLowerCase() === 'quebra'}/>
-                    <Input type="number" step="0.1" value={part.percentage} disabled onChange={(e) => handlePartChange(i, "percentage", e.target.value)} />
-                    <Input type="number" step="0.01" value={part.weight} disabled />
+                    <Input value={part.name ?? ""} onChange={(e) => handlePartChange(i, "name", e.target.value)} disabled={part.name.toLowerCase() === "quebra"} />
+                    <Input placeholder="%" type="number" step="0.1" value={part.percentage} disabled />
+                    <Input placeholder="Peso (Kg)" type="number" step="0.01" value={part.weight} disabled />
                   </div>
                 ))}
               </div>
             )}
 
             <div className="flex items-center gap-2">
-              <Switch checked={form.isActive} onCheckedChange={(val) => setForm((prev) => ({ ...prev, isActive: val }))} />
+              <Switch checked={form.isActive} onCheckedChange={(val) => setForm(prev => ({ ...prev, isActive: val }))} />
               <Label>Ativo</Label>
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" className="w-fit">{form.id ? "Salvar" : "Adicionar"}</Button>
-              {form.id && (
-                <Button type="button" variant="outline" onClick={() => {
-                  setForm({ id: "", title: "", weight: "", price: "", sellPrice: "", categoryId: "", patternId: "", isActive: true });
-                  setParts([]);
-                  setSelectedPattern(null);
-                }}>Cancelar</Button>
+              <Button type="submit" className="w-fit">
+                {isEditing ? "Salvar Edição" : (alreadyExists ? "Adicionar ao Existente" : "Adicionar Novo")}
+              </Button>
+              {isEditing && (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancelar Edição
+                </Button>
               )}
             </div>
           </form>
         </CardContent>
       </Card>
 
+      {/* Lista de Posts */}
       <div className="grid gap-3">
-        {posts.map((post) => (
+        {posts.map(post => (
           <Card key={post.id}>
             <CardContent className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">{post.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  {post.category?.name || "Sem categoria"} • {post.weight}kg • R${post.price}
+                  {post.category?.name || "Sem categoria"} • <b>{post.weight.toFixed(2)}kg</b> • Preço Base: <b>R${post.price.toFixed(2)}</b> • Preço Venda: <b>R${(post.sellPrice ?? (post.price * (1 + MARGIN_PERCENTAGE))).toFixed(2)}</b>
                 </p>
               </div>
               <div className="flex gap-2">
