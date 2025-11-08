@@ -55,6 +55,7 @@ interface EditPartSheetProps {
   >;
   fillAllRemaining: (index: number) => void;
   handleBaixa: () => void;
+  availableParts?: any[];
 }
 
 export default function EditPartSheet({
@@ -70,20 +71,91 @@ export default function EditPartSheet({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  // 🔹 Função auxiliar — incrementa o sold corretamente no banco
+  const soldIncrement = async (partId: string, soldToAdd: number, sellPrice: number) => {
+    try {
+      // Busca a parte atual
+      const partRes = await fetch(`/api/parts/${partId}`);
+      if (!partRes.ok) throw new Error("Erro ao buscar parte");
+      const currentPart = await partRes.json();
+
+      // Calcula novo sold da parte
+      const newPartSold = Number(currentPart.sold || 0) + Number(soldToAdd);
+
+      // Atualiza parte com sold incrementado
+      const updatePartRes = await fetch(`/api/parts/${partId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sold: newPartSold,
+          sellPrice,
+          userId: session?.user?.id,
+        }),
+      });
+      if (!updatePartRes.ok) throw new Error("Erro ao atualizar parte");
+
+      // 🔹 Atualiza o sold do post pai de forma incremental (corrigido)
+      if (currentPart.postId) {
+        const postRes = await fetch(`/api/posts/${currentPart.postId}`);
+        if (!postRes.ok) throw new Error("Erro ao buscar post pai");
+        const currentPost = await postRes.json();
+
+        const newPostSold = Number(currentPost.sold || 0) + Number(soldToAdd);
+
+        const updatePostRes = await fetch(`/api/posts/updateSold`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: currentPart.postId,
+            sold: newPostSold, // ✅ campo correto que a rota espera
+          }),
+        });
+
+        if (!updatePostRes.ok) throw new Error("Erro ao atualizar post pai");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Erro em soldIncrement:", error);
+      toast.error("Erro ao atualizar venda da parte.");
+      return false;
+    }
+  };
+
   // Buscar partes disponíveis
   useEffect(() => {
-    async function fetchParts() {
-      try {
-        const res = await fetch("/api/parts");
-        const data = await res.json();
-        setAvailableParts(data || []);
-      } catch (err) {
-        console.error(err);
-        toast.error("Erro ao buscar partes disponíveis.");
-      }
+    if (availableParts && availableParts.length > 0) {
+      setAvailableParts(availableParts);
+      return;
     }
+
+    if (!session?.user?.id) return;
+
+    const fetchParts = async () => {
+      try {
+        const res = await fetch(`/api/parts?userId=${session.user.id}`);
+        if (!res.ok) {
+          console.error("Resposta da API:", res.status, res.statusText);
+          toast.error("Erro ao buscar partes disponíveis.");
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+          toast.warning("Nenhuma parte disponível encontrada.");
+        }
+
+        console.log("📦 Partes carregadas:", data);
+        setAvailableParts(data);
+      } catch (err) {
+        console.error("Erro no fetchParts:", err);
+        toast.error("Erro ao carregar partes.");
+      }
+    };
+
     fetchParts();
-  }, []);
+  }, [availableParts, session]);
 
   const filteredParts = availableParts.filter(
     (p) =>
@@ -161,7 +233,6 @@ export default function EditPartSheet({
     setIsConfirming(true);
     try {
       const saleItems: any[] = [];
-      const postSalesMap: Record<string, number> = {};
 
       for (const item of soldParts) {
         const { part, soldValue, sellPrice } = item;
@@ -178,16 +249,9 @@ export default function EditPartSheet({
           return;
         }
 
-        // Atualiza parte
-        const partRes = await fetch(`/api/parts/${part.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sold: (part.sold || 0) + soldValue,
-            sellPrice,
-          }),
-        });
-        if (!partRes.ok) throw new Error(`Erro ao atualizar ${part.name}`);
+        // 🔹 Usa soldIncrement para atualizar corretamente no banco
+        const success = await soldIncrement(part.id, soldValue, sellPrice);
+        if (!success) throw new Error(`Erro ao atualizar ${part.name}`);
 
         const totalPrice = soldValue * sellPrice;
         const profit = (sellPrice - (part.price || 0)) * soldValue;
@@ -201,6 +265,7 @@ export default function EditPartSheet({
           profit,
         });
 
+        // Registra a venda individual
         await fetch(`/api/sales`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -211,20 +276,7 @@ export default function EditPartSheet({
             profit,
           }),
         });
-
-        // Soma vendida no post pai
-        if (!postSalesMap[part.postId]) postSalesMap[part.postId] = 0;
-        postSalesMap[part.postId] += soldValue;
       }
-
-      // Atualiza posts pai
-      for (const postId of Object.keys(postSalesMap)) {
-  await fetch("/api/posts/updateSold", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ postId }),
-  });
-}
 
       // Cria nota de venda
       const notaRes = await fetch("/api/salenotes", {
@@ -299,7 +351,7 @@ export default function EditPartSheet({
             <div className="text-center py-6 text-gray-500">Nenhuma parte adicionada.</div>
           ) : (
             soldParts.map((item, i) => {
-              const disponivel = item.part.weight - (item.part.sold ?? 0);
+              const disponivel = item.part.weight - item.part.sold;
               return (
                 <div key={i} className="border p-3 rounded-md flex flex-col gap-2">
                   <div className="flex justify-between items-center">
@@ -316,7 +368,7 @@ export default function EditPartSheet({
                         type="number"
                         min={0}
                         max={disponivel}
-                        value={item.soldValue || ""}
+                        value={item.soldValue ?? ""}
                         onChange={(e) => {
                           const val = e.target.value === "" ? 0 : Number(e.target.value);
                           handleSoldChange(i, val);
@@ -341,9 +393,7 @@ export default function EditPartSheet({
                     <Input
                       type="number"
                       value={item.sellPrice}
-                      onChange={(e) =>
-                        handleSellPriceChange(i, Number(e.target.value))
-                      }
+                      onChange={(e) => handleSellPriceChange(i, Number(e.target.value))}
                       disabled
                     />
                   </div>

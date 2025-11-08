@@ -103,7 +103,7 @@ model Part {
 model Sale {
   id         String   @id @default(cuid())
   partId     String
-  part       Part     @relation(fields: [partId], references: [id])
+  part       Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
   quantity   Float
   totalPrice Float
   profit     Float
@@ -127,7 +127,7 @@ model SaleNoteItem {
   sellPrice   Float
   totalPrice  Float
   profit      Float
-  saleNote    SaleNote @relation(fields: [saleNoteId], references: [id])
+  saleNote    SaleNote @relation(fields: [saleNoteId], references: [id], onDelete: Cascade)
 }
 
 

@@ -463,6 +463,7 @@ export default function GraphicsPartsPage() {
           });
         }}
         handleBaixa={handleBaixa}
+        
       />
 
       <SalesSummarySheet

@@ -194,74 +194,85 @@ export default function PartsTable({
 
   // 🔹 Confirma redução e atualiza parte original
   const handleConfirmReduction = async (part: any) => {
-    const reduction = reductionValues[part.id];
-    if (!reduction?.name || !reduction?.weight) {
-      toast.error("Preencha o nome e o peso da nova parte.");
-      return;
-    }
+  const reduction = reductionValues[part.id];
+  if (!reduction?.name || !reduction?.weight) {
+    toast.error("Preencha o nome e o peso da nova parte.");
+    return;
+  }
 
-    const weightToReduce = Number(reduction.weight);
-    const percent = Number(reduction.percent || "0");
+  const weightToReduce = Number(reduction.weight);
+  const percent = Number(reduction.percent || "0");
 
-    if (isNaN(weightToReduce) || weightToReduce <= 0) {
-      toast.error("Digite um peso válido para redução.");
-      return;
-    }
+  if (isNaN(weightToReduce) || weightToReduce <= 0) {
+    toast.error("Digite um peso válido para redução.");
+    return;
+  }
 
-    const available = Number(part.totalWeight) - Number(part.totalSold);
-    if (weightToReduce >= available) {
-      toast.error("Peso de redução maior ou igual ao disponível!");
-      return;
-    }
+  // 🟡 Buscar parte original no banco para obter o peso real
+  const res = await fetch(`/api/parts`);
+  const allParts = await res.json();
+  const originalPart = allParts.find((p: any) => p.id === part.id);
 
-    try {
-      const adjustedSellPrice =
-        part.sellPrice && !isNaN(percent)
-          ? part.sellPrice + (part.sellPrice * percent) / 100
-          : part.sellPrice;
+  if (!originalPart) {
+    toast.error("Parte original não encontrada no banco.");
+    return;
+  }
 
-      // Cria nova parte
-      const createRes = await fetch(`/api/parts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId: part.postId,
-          name: reduction.name,
-          weight: weightToReduce,
-          price: part.price,
-          sellPrice: adjustedSellPrice,
-          isActive: part.isActive ?? true,
-          sold: 0,
-        }),
-      });
+  const available = Number(originalPart.weight) - Number(originalPart.sold);
+  if (weightToReduce >= available) {
+    toast.error("Peso de redução maior ou igual ao disponível!");
+    return;
+  }
 
-      if (!createRes.ok) throw new Error("Erro ao criar nova parte");
+  try {
+    const adjustedSellPrice =
+      originalPart.sellPrice && !isNaN(percent)
+        ? originalPart.sellPrice + (originalPart.sellPrice * percent) / 100
+        : originalPart.sellPrice;
 
-      // Atualiza a parte original (peso - redução)
-      const updatedWeight = Number(part.totalWeight) - weightToReduce;
-      const patchRes = await fetch(`/api/parts/${part.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight: updatedWeight }),
-      });
+    // ✅ Cria nova parte
+    const createRes = await fetch(`/api/parts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId: originalPart.postId,
+        name: reduction.name,
+        weight: weightToReduce,
+        price: originalPart.price,
+        sellPrice: adjustedSellPrice,
+        isActive: originalPart.isActive ?? true,
+        sold: 0,
+      }),
+    });
 
-      if (!patchRes.ok) throw new Error("Erro ao atualizar parte original");
+    if (!createRes.ok) throw new Error("Erro ao criar nova parte");
 
-      toast.success(
-        `Parte "${part.name}" reduzida. Nova parte "${reduction.name}" criada (${weightToReduce}kg).`
-      );
+    // ✅ Atualiza peso da parte original com base no valor real
+    const updatedWeight = Number(originalPart.weight) - weightToReduce;
+    const patchRes = await fetch(`/api/parts/${part.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weight: updatedWeight }),
+    });
 
-      setReductionValues((prev) => ({
-        ...prev,
-        [part.id]: { name: "", weight: "", percent: "" },
-      }));
-      setOpenDialog({ id: null, type: null });
-      refreshParts();
-    } catch (err) {
-      console.error("Erro no handleConfirmReduction:", err);
-      toast.error("Erro ao reduzir parte.");
-    }
-  };
+    if (!patchRes.ok) throw new Error("Erro ao atualizar parte original");
+
+    toast.success(
+      `Parte "${originalPart.name}" reduzida. Nova parte "${reduction.name}" criada (${weightToReduce}kg).`
+    );
+
+    setReductionValues((prev) => ({
+      ...prev,
+      [part.id]: { name: "", weight: "", percent: "" },
+    }));
+    setOpenDialog({ id: null, type: null });
+    refreshParts();
+  } catch (err) {
+    console.error("Erro no handleConfirmReduction:", err);
+    toast.error("Erro ao reduzir parte.");
+  }
+};
+
 
   return (
     <div className="flex flex-col gap-3 px-0">

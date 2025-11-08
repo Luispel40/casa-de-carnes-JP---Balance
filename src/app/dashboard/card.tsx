@@ -18,6 +18,7 @@ import SettingsPopup from "_components/SettingsPopup";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import { toDate } from "date-fns";
 
 interface CardItemProps {
   userId: string;
@@ -97,7 +98,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
   }, [data, selectedCategory]);
 
   const handleAdd = () => {
-    if (!selectedType) return alert("Selecione um tipo antes de adicionar.");
+    if (!selectedType) return toast.error("Selecione um tipo antes de adicionar.");
     setIsPopupOpen(true);
   };
 
