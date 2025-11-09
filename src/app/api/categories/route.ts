@@ -4,14 +4,14 @@ import { db } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, userId } = body;
+    const { name, userId, special } = body;
 
     if (!userId) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
     }
 
     const category = await db.category.create({
-      data: { name, userId },
+      data: { name, userId, special },
     });
 
     return NextResponse.json(category);

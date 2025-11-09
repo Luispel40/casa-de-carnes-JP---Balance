@@ -7,8 +7,12 @@ export async function GET(req: NextRequest, context: any) {
   try {
     const categories = await db.category.findMany({
       where: { userId },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      select: { id: true, name: true, special: true },
+      orderBy: [
+  { name: "asc" },
+  { id: "asc" },
+  { special: "asc" },
+],
     });
 
     return NextResponse.json(categories);
@@ -30,6 +34,7 @@ export async function POST(req: NextRequest, context: any) {
       data: {
         name: body.name,
         userId,
+        special: body.special,
       },
     });
 
@@ -49,6 +54,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: body.id },
       data: {
         name: body.name,
+        special: body.special,
       },
     });
 

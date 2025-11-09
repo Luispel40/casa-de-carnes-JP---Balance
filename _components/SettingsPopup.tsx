@@ -19,6 +19,11 @@ const FIELD_SCHEMAS: Record<
 > = {
   categories: [
     { name: "name", label: "Nome da Categoria", placeholder: "Ex: Bovina" },
+    {
+      name: "special",
+      label: "Categoria unitária?",
+      type: "checkbox",
+    },
   ],
   employees: [
     {
@@ -41,14 +46,24 @@ const FIELD_SCHEMAS: Record<
       label: "Título do Produto",
       placeholder: "Ex: Picanha Premium",
     },
-    { name: "price", label: "Preço de Custo (R$)", type: "number", placeholder: "Ex: 59.90" },
+    {
+      name: "price",
+      label: "Preço de Custo (R$)",
+      type: "number",
+      placeholder: "Ex: 59.90",
+    },
     {
       name: "sellPrice",
       label: "Preço de Venda (R$)",
       type: "number",
       placeholder: "Ex: 79.90",
     },
-    { name: "weight", label: "Peso (kg)", type: "number", placeholder: "Ex: 1.5" },
+    {
+      name: "weight",
+      label: "Peso (kg)",
+      type: "number",
+      placeholder: "Ex: 1.5",
+    },
     { name: "isActive", label: "Disponível", type: "checkbox" },
   ],
   patterns: [
@@ -99,19 +114,18 @@ export default function SettingsPopup({
   const [loadingCategories, setLoadingCategories] = useState(false);
 
   const fields = FIELD_SCHEMAS[type] || [];
-  
+
   // Filtra os campos para serem renderizados no fluxo principal
-  const primaryFields = fields.filter(f => 
-    !["price", "sellPrice", "weight", "isActive"].includes(f.name)
+  const primaryFields = fields.filter(
+    (f) => !["price", "sellPrice", "weight", "isActive"].includes(f.name)
   );
 
-  const priceFields = fields.filter(f => 
+  const priceFields = fields.filter((f) =>
     ["price", "sellPrice"].includes(f.name)
   );
 
-  const weightField = fields.find(f => f.name === "weight");
-  const isActiveField = fields.find(f => f.name === "isActive");
-
+  const weightField = fields.find((f) => f.name === "weight");
+  const isActiveField = fields.find((f) => f.name === "isActive");
 
   // 🔹 Buscar categorias e padrões
   useEffect(() => {
@@ -159,13 +173,23 @@ export default function SettingsPopup({
           }
         }
       } else if (type === "patterns" && initialData.parts) {
-         // Recalcula quebra para o modo edit de patterns
-         const initialPartsWithoutBreak = initialData.parts.filter((p: any) => p.name.toLowerCase() !== "quebra");
-         const usedPercent = initialPartsWithoutBreak.reduce(
-            (acc: number, p: any) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
-            0
-          );
-          setParts([...initialPartsWithoutBreak, { name: "Quebra", percentage: Math.max(0, 100 - usedPercent), weight: 0 }]);
+        // Recalcula quebra para o modo edit de patterns
+        const initialPartsWithoutBreak = initialData.parts.filter(
+          (p: any) => p.name.toLowerCase() !== "quebra"
+        );
+        const usedPercent = initialPartsWithoutBreak.reduce(
+          (acc: number, p: any) =>
+            acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+          0
+        );
+        setParts([
+          ...initialPartsWithoutBreak,
+          {
+            name: "Quebra",
+            percentage: Math.max(0, 100 - usedPercent),
+            weight: 0,
+          },
+        ]);
       }
       setLoadingCategories(false);
     };
@@ -188,10 +212,12 @@ export default function SettingsPopup({
       );
       return;
     }
-    
+
     // Calcula a nova quebra antes de adicionar a nova parte
     const newBreakPercentage = Math.max(0, 100 - usedPercent);
-    const partsWithoutBreak = parts.filter((p) => p.name.toLowerCase() !== "quebra");
+    const partsWithoutBreak = parts.filter(
+      (p) => p.name.toLowerCase() !== "quebra"
+    );
 
     setParts([
       ...partsWithoutBreak,
@@ -232,8 +258,10 @@ export default function SettingsPopup({
           (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
           0
         );
-      
-      const partsWithoutBreak = updated.filter((p) => p.name.toLowerCase() !== "quebra");
+
+      const partsWithoutBreak = updated.filter(
+        (p) => p.name.toLowerCase() !== "quebra"
+      );
 
       return [
         ...partsWithoutBreak,
@@ -252,12 +280,12 @@ export default function SettingsPopup({
       const partsWithoutBreak = prev.filter(
         (_, i) => i !== index && _.name.toLowerCase() !== "quebra"
       );
-      
+
       const usedPercent = partsWithoutBreak.reduce(
         (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
         0
       );
-      
+
       return [
         ...partsWithoutBreak,
         {
@@ -282,7 +310,7 @@ export default function SettingsPopup({
 
       if (name === "weight" && selectedPattern) {
         const numericWeight = parseFloat(value) || 0;
-        
+
         // Recalcula o peso das partes baseadas no novo peso total
         const updatedParts = selectedPattern.parts.map((p: any) => ({
           name: p.name,
@@ -296,11 +324,17 @@ export default function SettingsPopup({
       }
 
       // Se price ou sellPrice mudam, atualiza nos parts gerados
-      if (type === "number" && (name === "price" || name === "sellPrice") && selectedPattern) {
-        setParts(prevParts => prevParts.map(p => ({
+      if (
+        type === "number" &&
+        (name === "price" || name === "sellPrice") &&
+        selectedPattern
+      ) {
+        setParts((prevParts) =>
+          prevParts.map((p) => ({
             ...p,
-            [name]: parseFloat(value) || 0
-        })));
+            [name]: parseFloat(value) || 0,
+          }))
+        );
       }
 
       return newData;
@@ -364,10 +398,10 @@ export default function SettingsPopup({
         },
       ];
     }
-    
+
     // Remove "Quebra" do payload final se for um post com padrão, já que é apenas visual
     if (type === "posts" && selectedPattern) {
-        adjustedParts = parts.filter(p => p.name.toLowerCase() !== "quebra");
+      adjustedParts = parts.filter((p) => p.name.toLowerCase() !== "quebra");
     }
 
     const quebraPart = adjustedParts.find(
@@ -380,21 +414,22 @@ export default function SettingsPopup({
         : formData.sold || 0;
 
     // Remove campos quebra/porcentagem se for salvar um post
-    const finalPartsPayload = 
-        type === "posts" 
-        ? adjustedParts.map(p => ({ 
-            name: p.name, 
-            weight: p.weight, 
-            price: p.price, 
+    const finalPartsPayload =
+      type === "posts"
+        ? adjustedParts.map((p) => ({
+            name: p.name,
+            weight: p.weight,
+            price: p.price,
             sellPrice: p.sellPrice,
-            isActive: p.isActive 
+            isActive: p.isActive,
           }))
         : adjustedParts; // Mantém % e quebra para patterns
 
     const payload = {
       ...formData,
       // Se for posts e não tiver padrão, a quebra não existe.
-      sold: type === "posts" && !selectedPattern ? (formData.sold || 0) : totalSold,
+      sold:
+        type === "posts" && !selectedPattern ? formData.sold || 0 : totalSold,
       parts: finalPartsPayload,
     };
 
@@ -405,10 +440,12 @@ export default function SettingsPopup({
   // 🔹 Validação do botão Salvar
   const isSaveDisabled = (() => {
     if (type === "posts") {
-      return !(
-        formData.title ||
-        formData.name
-      ) || !formData.price || !formData.weight || !formData.categoryId;
+      return (
+        !(formData.title || formData.name) ||
+        !formData.price ||
+        !formData.weight ||
+        !formData.categoryId
+      );
     } else if (type === "patterns") {
       const totalPercent = parts.reduce(
         (acc, p) => acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
@@ -416,11 +453,15 @@ export default function SettingsPopup({
       );
       // Verifica se o total de porcentagem é 100%
       const isTotal100 = totalPercent >= 99.9 && totalPercent <= 100.1;
-      
-      // Verifica se todas as partes têm nome (exceto quebra)
-      const hasEmptyName = parts.some(p => p.name.toLowerCase() !== "quebra" && !p.name);
 
-      return !formData.name || !formData.categoryId || !isTotal100 || hasEmptyName;
+      // Verifica se todas as partes têm nome (exceto quebra)
+      const hasEmptyName = parts.some(
+        (p) => p.name.toLowerCase() !== "quebra" && !p.name
+      );
+
+      return (
+        !formData.name || !formData.categoryId || !isTotal100 || hasEmptyName
+      );
     }
     return !formData.name;
   })();
@@ -438,7 +479,9 @@ export default function SettingsPopup({
           </Button>
         </CardHeader>
 
-        <CardContent className="space-y-4 overflow-y-auto flex-1 pb-4"> {/* Adicionado overflow-y-auto */}
+        <CardContent className="space-y-4 overflow-y-auto flex-1 pb-4">
+          {" "}
+          {/* Adicionado overflow-y-auto */}
           {/* Campos principais (gerais) */}
           {primaryFields.map((field) => (
             <div key={field.name} className="flex flex-col">
@@ -448,8 +491,8 @@ export default function SettingsPopup({
                 type={field.type || "text"}
                 placeholder={field.placeholder}
                 value={
-                    field.type === "checkbox" 
-                    ? formData[field.name] ?? false 
+                  field.type === "checkbox"
+                    ? formData[field.name] ?? false
                     : formData[field.name] ?? ""
                 }
                 onChange={handleChange}
@@ -457,7 +500,6 @@ export default function SettingsPopup({
               />
             </div>
           ))}
-
           {/* --------------------------- Posts --------------------------- */}
           {type === "posts" && (
             <>
@@ -465,7 +507,9 @@ export default function SettingsPopup({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {/* Categoria */}
                 <div className="flex flex-col">
-                  <label className="text-sm font-medium mb-1">Categoria *</label>
+                  <label className="text-sm font-medium mb-1">
+                    Categoria *
+                  </label>
                   <NativeSelect
                     name="categoryId"
                     value={formData.categoryId || ""}
@@ -483,7 +527,7 @@ export default function SettingsPopup({
                     ))}
                   </NativeSelect>
                 </div>
-                
+
                 {/* Padrão */}
                 {patterns.length > 0 && (
                   <div className="flex flex-col">
@@ -505,69 +549,82 @@ export default function SettingsPopup({
 
                 {/* Disponível (isActive) */}
                 {isActiveField && (
-                    <div className="flex items-end h-full pt-4">
-                        <div className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={isActiveField.name} 
-                                name={isActiveField.name}
-                                checked={formData[isActiveField.name] ?? true}
-                                onCheckedChange={(checked) => handleChange({ 
-                                    target: { 
-                                        name: isActiveField.name, 
-                                        value: checked, 
-                                        type: 'checkbox' 
-                                    } 
-                                } as React.ChangeEvent<HTMLInputElement>)}
-                            />
-                            <label htmlFor={isActiveField.name} className="text-sm font-medium leading-none cursor-pointer">
-                                {isActiveField.label}
-                            </label>
-                        </div>
+                  <div className="flex items-end h-full pt-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={isActiveField.name}
+                        name={isActiveField.name}
+                        checked={formData[isActiveField.name] ?? true}
+                        onCheckedChange={(checked) =>
+                          handleChange({
+                            target: {
+                              name: isActiveField.name,
+                              value: checked,
+                              type: "checkbox",
+                            },
+                          } as React.ChangeEvent<HTMLInputElement>)
+                        }
+                      />
+                      <label
+                        htmlFor={isActiveField.name}
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        {isActiveField.label}
+                      </label>
                     </div>
+                  </div>
                 )}
               </div>
-              
+
               {/* Campos de Valores (Preço/Venda/Peso) - Lado a Lado */}
               <div className="grid grid-cols-2 gap-3">
                 {priceFields.map((field) => (
-                    <div key={field.name} className="flex flex-col">
-                        <label className="text-sm font-medium mb-1">{field.label}</label>
-                        <Input
-                            name={field.name}
-                            type={field.type || "text"}
-                            placeholder={field.placeholder}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                        />
-                    </div>
+                  <div key={field.name} className="flex flex-col">
+                    <label className="text-sm font-medium mb-1">
+                      {field.label}
+                    </label>
+                    <Input
+                      name={field.name}
+                      type={field.type || "text"}
+                      placeholder={field.placeholder}
+                      value={formData[field.name] || ""}
+                      onChange={handleChange}
+                    />
+                  </div>
                 ))}
 
                 {weightField && (
-                    <div className="flex flex-col">
-                        <label className="text-sm font-medium mb-1">{weightField.label} *</label>
-                        <Input
-                            name={weightField.name}
-                            type={weightField.type || "text"}
-                            placeholder={weightField.placeholder}
-                            value={formData[weightField.name] || ""}
-                            onChange={handleChange}
-                        />
-                    </div>
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium mb-1">
+                      {weightField.label} *
+                    </label>
+                    <Input
+                      name={weightField.name}
+                      type={weightField.type || "text"}
+                      placeholder={weightField.placeholder}
+                      value={formData[weightField.name] || ""}
+                      onChange={handleChange}
+                    />
+                  </div>
                 )}
               </div>
-
 
               {/* Partes Geradas (apenas visualização) */}
               {selectedPattern && parts.length > 0 && (
                 <div className="border-t pt-3">
-                  <h4 className="text-base font-semibold mb-2">Detalhes das Partes:</h4>
+                  <h4 className="text-base font-semibold mb-2">
+                    Detalhes das Partes:
+                  </h4>
                   <div className="max-h-40 overflow-y-auto p-2 border rounded-md bg-gray-50 space-y-1">
                     <ul className="text-sm">
                       {parts.map((p, i) => (
-                        <li key={i} className="flex justify-between border-b last:border-b-0 py-1">
-                          <span className="font-medium">{p.name}</span> 
+                        <li
+                          key={i}
+                          className="flex justify-between border-b last:border-b-0 py-1"
+                        >
+                          <span className="font-medium">{p.name}</span>
                           <span className="text-gray-600">
-                            {p.percentage ? `${p.percentage}%` : ''} 
+                            {p.percentage ? `${p.percentage}%` : ""}
                             {p.weight !== undefined && ` | ${p.weight}kg`}
                           </span>
                         </li>
@@ -578,7 +635,6 @@ export default function SettingsPopup({
               )}
             </>
           )}
-
           {/* --------------------------- Patterns --------------------------- */}
           {type === "patterns" && (
             <div className="space-y-3 border-t pt-3">
@@ -601,10 +657,11 @@ export default function SettingsPopup({
                   ))}
                 </NativeSelect>
               </div>
-              
 
-              <h4 className="text-base font-semibold pt-2">Partes do Padrão (%)</h4>
-              
+              <h4 className="text-base font-semibold pt-2">
+                Partes do Padrão (%)
+              </h4>
+
               {/* Container de Scroll para Partes Dinâmicas */}
               <div className="max-h-60 overflow-y-auto space-y-3 p-2 border rounded-md">
                 {parts.map((part, index) => (
@@ -618,18 +675,20 @@ export default function SettingsPopup({
                       disabled={part.name.toLowerCase() === "quebra"}
                     />
                     <div className="flex items-center w-24">
-                        <Input
-                          type="number"
-                          step="0.1"
-                          placeholder="%"
-                          value={part.percentage}
-                          disabled={part.name.toLowerCase() === "quebra"}
-                          onChange={(e) =>
-                            handlePartChange(index, "percentage", e.target.value)
-                          }
-                          className="pr-6"
-                        />
-                        <span className="absolute right-2 text-sm text-gray-500">%</span>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="%"
+                        value={part.percentage}
+                        disabled={part.name.toLowerCase() === "quebra"}
+                        onChange={(e) =>
+                          handlePartChange(index, "percentage", e.target.value)
+                        }
+                        className="pr-6"
+                      />
+                      <span className="absolute right-2 text-sm text-gray-500">
+                        %
+                      </span>
                     </div>
 
                     {part.name.toLowerCase() !== "quebra" ? (
@@ -642,20 +701,22 @@ export default function SettingsPopup({
                         ✕
                       </Button>
                     ) : (
-                        <div className="w-10 shrink-0"></div> // Espaço vazio para alinhar
+                      <div className="w-10 shrink-0"></div> // Espaço vazio para alinhar
                     )}
                   </div>
                 ))}
               </div>
               {/* Fim do Container de Scroll */}
-              
+
               <div className="text-sm text-muted-foreground mt-1 font-medium">
                 Soma total:{" "}
-                {parts.reduce(
-                  (acc, p) =>
-                    acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
-                  0
-                ).toFixed(2)}
+                {parts
+                  .reduce(
+                    (acc, p) =>
+                      acc + (parseFloat(p.percentage?.toString() ?? "") || 0),
+                    0
+                  )
+                  .toFixed(2)}
                 %
               </div>
 
@@ -669,10 +730,9 @@ export default function SettingsPopup({
               </Button>
             </div>
           )}
-          
           {/* Botão de Salvar sempre no final */}
           <Button
-            className="w-full sticky bottom-0 z-10" 
+            className="w-full sticky bottom-0 z-10"
             onClick={handleSubmit}
             disabled={isSaveDisabled}
           >
