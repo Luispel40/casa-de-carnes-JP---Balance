@@ -54,7 +54,8 @@ interface EditPartSheetProps {
     >
   >;
   
-  handleBaixa: () => void;
+  fillAllRemaining: (index: number) => void;
+  handleBaixa: () => Promise<void>;
   availableParts?: any[];
 }
 
