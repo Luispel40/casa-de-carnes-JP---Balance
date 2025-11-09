@@ -63,6 +63,7 @@ model Category {
   id        String   @id @default(cuid())
   name      String
   userId    String
+  special   Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   posts     Post[]
