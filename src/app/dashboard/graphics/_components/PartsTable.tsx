@@ -358,7 +358,7 @@ export default function PartsTable({
                     {formatCurrency(part.sellPrice)}
                   </td>
                   <td className="p-2 flex gap-2 items-start">
-                    <Dialog>
+                    {/* <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon-sm">
                           <Trash />
@@ -385,7 +385,7 @@ export default function PartsTable({
                           </DialogClose>
                         </DialogFooter>
                       </DialogContent>
-                    </Dialog>
+                    </Dialog> */}
 
                     <Button
                       variant="ghost"

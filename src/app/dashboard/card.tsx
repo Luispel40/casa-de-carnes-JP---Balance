@@ -169,12 +169,12 @@ export default function CardItem({ userId, selected }: CardItemProps) {
 
         return (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
+            {/* <p className="text-sm text-muted-foreground">
               Peso total disponível:{" "}
               <span className="font-semibold">{totalAvailable.toFixed(2)} kg</span>
-            </p>
+            </p> */}
 
-            <ScrollArea className="h-[200px] border rounded-md">
+            {/* <ScrollArea className="h-[200px] border rounded-md">
               <table className="w-full text-sm">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
@@ -211,7 +211,8 @@ export default function CardItem({ userId, selected }: CardItemProps) {
                   )}
                 </tbody>
               </table>
-            </ScrollArea>
+            </ScrollArea> */}
+            <p>Entre para ver mais detalhes</p>
           </div>
         );
 
