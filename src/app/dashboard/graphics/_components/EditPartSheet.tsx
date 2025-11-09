@@ -53,7 +53,7 @@ interface EditPartSheetProps {
       }>
     >
   >;
-  fillAllRemaining: (index: number) => void;
+  
   handleBaixa: () => void;
   availableParts?: any[];
 }
@@ -63,7 +63,6 @@ export default function EditPartSheet({
   setOpen,
   soldParts,
   setSoldParts,
-  fillAllRemaining,
 }: EditPartSheetProps) {
   const { data: session } = useSession();
   const [availableParts, setAvailableParts] = useState<any[]>([]);
@@ -378,14 +377,7 @@ export default function EditPartSheet({
                         Disponível: {disponivel}kg
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mb-1"
-                      onClick={() => fillAllRemaining(i)}
-                    >
-                      Tudo
-                    </Button>
+                    
                   </div>
 
                   <div>

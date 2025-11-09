@@ -435,7 +435,7 @@ export default function PostsForm() {
     <div className="flex flex-col gap-6">
       {/* Formulário */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <form onSubmit={handleSubmit} className="grid gap-4">
             {/* Switch Produto Existente */}
             <div className="flex items-center gap-3">
@@ -453,7 +453,7 @@ export default function PostsForm() {
               <Label>Produto/Peça já existe?</Label>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 ">
               {alreadyExists && !isEditing ? (
                 <Select value={form.title} onValueChange={handleTitleSelect}>
                   <SelectTrigger disabled={isEditing}>
@@ -559,17 +559,17 @@ export default function PostsForm() {
       </Card>
 
       {/* Lista de Posts */}
-      <div className="grid gap-3">
+      <div className="grid gap-3 p-0">
         {posts.map(post => (
           <Card key={post.id}>
-            <CardContent className="flex items-center justify-between p-4">
-              <div>
+            <CardContent className="flex flex-col items-center justify-between p-4 gap-2">
+              <div className="flex flex-col gap-1 self-start">
                 <p className="font-medium">{post.title}</p>
                 <p className="text-sm text-muted-foreground">
                   {post.category?.name || "Sem categoria"} • <b>{post.weight.toFixed(2)}kg</b> • Preço Base: <b>R${post.price.toFixed(2)}</b> • Preço Venda: <b>R${(post.sellPrice ?? (post.price * (1 + MARGIN_PERCENTAGE))).toFixed(2)}</b>
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-end ">
                 <Button size="sm" variant="outline" onClick={() => handleEdit(post)}>Editar</Button>
                 <Dialog>
                   <DialogTrigger asChild>

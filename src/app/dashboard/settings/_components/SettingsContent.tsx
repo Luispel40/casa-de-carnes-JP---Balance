@@ -9,6 +9,7 @@ import PostsForm from "./forms/PostsForm";
 import PatternsTable from "./forms/PatternForm";
 import { Button } from "@/_components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import PostsFormTest from "./forms/PostForm/page";
 
 export default function SettingsContent() {
   const { data: session } = useSession();
@@ -25,7 +26,7 @@ export default function SettingsContent() {
       case "categories":
         return <CategoriesForm />;
       case "posts":
-        return <PostsForm />;
+        return <PostsFormTest />;
       case "patterns":
         return <PatternsTable />;
       default:
@@ -43,9 +44,9 @@ export default function SettingsContent() {
         {activeTab === "patterns" && "Padrões"}
       </h1>
 
-      <div className="bg-white shadow rounded-lg p-6 border min-h-[300px]">
-        <Button variant="link" className="mb-4" onClick={() => history.back()}>
-          <ChevronLeft className="mr-2" />
+      <div className="bg-transparent p-0 border min-h-[300px] border-none">
+        <Button variant="outline" className="mb-2" onClick={() => history.back()}>
+          <ChevronLeft className="mr-0" />
         </Button>
         {renderContent()}
       </div>
