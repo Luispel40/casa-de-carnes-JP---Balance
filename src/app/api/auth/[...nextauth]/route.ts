@@ -25,6 +25,7 @@ const finalAuthOptions = {
 };
 */
 
+
 // Simplificado: Apenas importa e usa as opções
 const handler = NextAuth(authOptions);
 

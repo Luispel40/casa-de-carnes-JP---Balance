@@ -7,6 +7,8 @@ import EmployeesForm from "./forms/EmployeesForm";
 import CategoriesForm from "./forms/CategoriesForm";
 import PostsForm from "./forms/PostsForm";
 import PatternsTable from "./forms/PatternForm";
+import { Button } from "@/_components/ui/button";
+import { ChevronLeft } from "lucide-react";
 
 export default function SettingsContent() {
   const { data: session } = useSession();
@@ -42,6 +44,9 @@ export default function SettingsContent() {
       </h1>
 
       <div className="bg-white shadow rounded-lg p-6 border min-h-[300px]">
+        <Button variant="link" className="mb-4" onClick={() => history.back()}>
+          <ChevronLeft className="mr-2" />
+        </Button>
         {renderContent()}
       </div>
     </div>
