@@ -11,6 +11,7 @@ import { toast } from "sonner";
 interface Category {
   id: string;
   name: string;
+  special?: boolean;
 }
 
 interface PatternPart {
@@ -66,6 +67,7 @@ export default function PatternForm() {
     fetchPatterns();
     fetchCategories();
   }, [userId]);
+
 
   // 🔹 Adicionar parte
   const handleAddPart = () => {
@@ -254,7 +256,7 @@ export default function PatternForm() {
                   ? "Carregando categorias..."
                   : "Selecione uma categoria"}
               </option>
-              {categories.map((cat) => (
+              {categories.filter((cat) => !cat.special).map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>

@@ -124,7 +124,7 @@ export default function CategoriesForm() {
               <CardContent className="flex items-center justify-between p-4">
                 <p className="font-medium">{cat.name}</p>
                 {cat.special && (
-                  <span className="text-xs text-blue-500 ml-2">Especial</span>
+                  <span className="text-xs text-blue-500 ml-2">Unitário</span>
                 )}
                 <div className="flex gap-2">
                   <Button

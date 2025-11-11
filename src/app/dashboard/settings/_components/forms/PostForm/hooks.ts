@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { calculatePartsFromPattern, mergeParts, MARGIN_PERCENTAGE } from "./functions";
 
-export interface Category { id: string; name: string; }
+export interface Category { id: string; name: string, special?: boolean; }
 export interface PatternPart { id?: string; name: string; percentage: number; }
 export interface Pattern { id: string; name: string; parts: PatternPart[]; categoryId: string; }
 export interface PostPart { id?: string; name: string; percentage: number; weight: number; price?: number; sellPrice?: number; isActive?: boolean; }
@@ -95,7 +95,8 @@ export function usePostsForm() {
       const partsFromPattern = calculatePartsFromPattern(
         pattern,
         parseFloat(form.weight) || 0,
-        parseFloat(form.price) || 0
+        parseFloat(form.price) || 0,
+        categories
       ).map(p => ({
         ...p,
         sellPrice: parseFloat(((p.price ?? 0) * (1 + MARGIN_PERCENTAGE)).toFixed(2))
@@ -202,18 +203,22 @@ export function usePostsForm() {
   };
 
   const handleEdit = (post: Post) => {
-    setOriginalPost(post);
-    setForm({
-      id: post.id,
-      title: post.title,
-      weight: String(post.weight),
-      price: String(post.price),
-      categoryId: post.categoryId,
-      patternId: post.patternId || "",
-      isActive: post.isActive
-    });
-    setParts(post.parts || []);
-  };
+  // tenta encontrar pattern com o mesmo nome do post
+  const matchedPattern = patterns.find((p) => p.name === post.title);
+
+  setOriginalPost(post);
+  setForm({
+    id: post.id,
+    title: post.title,
+    weight: String(),
+    price: String(post.price),
+    categoryId: post.categoryId,
+    patternId: matchedPattern?.id || "", // usa o id se achou, senão vazio
+    isActive: post.isActive,
+  });
+  setParts(post.parts || []);
+};
+
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/posts/${userId}`, {

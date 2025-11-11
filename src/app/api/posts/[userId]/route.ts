@@ -29,7 +29,11 @@ export async function GET(req: NextRequest, context: any) {
   try {
     const posts = await db.post.findMany({
       where: { userId },
-      include: { parts: true, category: true },
+      include: { parts: true, category: 
+        {
+          select: { id: true, name: true, special: true },
+        }
+       },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(posts);

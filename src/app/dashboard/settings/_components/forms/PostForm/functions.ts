@@ -1,9 +1,19 @@
 export const MARGIN_PERCENTAGE = 0.4;
 
-import type { Pattern, PostPart } from "./hooks";
+import type { Pattern, PostPart, Category } from "./hooks";
 
-export const calculatePartsFromPattern = (pattern: Pattern, weight: number, price: number): PostPart[] => {
-  const parts = pattern.parts.map(p => ({
+export const calculatePartsFromPattern = (pattern: Pattern, weight: number, price: number, categiries: Category[]): PostPart[] => {
+  const categoryIsSpecial = categiries.find(c => c.id === pattern.categoryId)?.special || false;
+  if (categoryIsSpecial) {
+    const parts = pattern.parts.map(p => ({
+      name: p.name,
+      percentage: p.percentage,
+      weight: parseFloat(((weight * p.percentage) / 100).toFixed(2)),
+      price: 0,
+      isActive: true,
+    }));
+  } 
+    const parts = pattern.parts.map(p => ({
     name: p.name,
     percentage: p.percentage,
     weight: parseFloat(((weight * p.percentage) / 100).toFixed(2)),
@@ -21,6 +31,7 @@ export const calculatePartsFromPattern = (pattern: Pattern, weight: number, pric
       isActive: true,
     });
   }
+  
 
   return parts;
 };
