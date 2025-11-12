@@ -146,7 +146,6 @@ export default function EditPartSheet({
           toast.warning("Nenhuma parte disponível encontrada.");
         }
 
-        console.log("📦 Partes carregadas:", data);
         setAvailableParts(data);
       } catch (err) {
         console.error("Erro no fetchParts:", err);

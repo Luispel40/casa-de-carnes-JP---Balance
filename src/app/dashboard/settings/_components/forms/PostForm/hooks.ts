@@ -213,7 +213,7 @@ export function usePostsForm() {
     weight: String(),
     price: String(post.price),
     categoryId: post.categoryId,
-    patternId: matchedPattern?.id || "", // usa o id se achou, senão vazio
+    patternId: matchedPattern?.id || "",
     isActive: post.isActive,
   });
   setParts(post.parts || []);

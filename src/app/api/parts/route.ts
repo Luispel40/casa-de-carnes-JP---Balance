@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     const parts = await db.part.findMany({
       include: {
         post: {
-          select: { id: true, title: true, userId: true }, // 🔹 incluir userId
+          select: { id: true, title: true, userId: true, category: { select: { id: true, name: true, special: true }} }, // 🔹 incluir userId
         },
       },
       orderBy: { createdAt: "desc" },
@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       ...part,
       userId: part.post.userId,
       postTitle: part.post.title,
+      category: part.post.category,
     }));
 
     return NextResponse.json(mappedParts);

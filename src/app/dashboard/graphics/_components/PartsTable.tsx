@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/_components/ui/button";
 import {
-  Trash,
   Edit,
   DollarSign,
   ChevronsUpDown,
@@ -16,12 +15,9 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
-  DialogTrigger,
 } from "@/_components/ui/dialog";
 import {
   Popover,
@@ -38,9 +34,28 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/helpers/format-currency";
 
+interface Category {
+  id: string;
+  name: string;
+  special: boolean;
+}
+
+interface Part {
+  id: string;
+  name: string;
+  totalWeight: number | string;
+  totalSold: number | string;
+  sellPrice: number;
+  createdAt?: string;
+  postId?: string;
+  postTitle?: string;
+  userId?: string;
+  category?: Category;
+}
+
 interface PartsTableProps {
   userId: string;
-  parts: any[];
+  parts: Part[];
   posts: any[];
   handleOpenEditSheet: (part: any) => void;
   handleDeletePart: (id: string, name: string) => void;
@@ -101,6 +116,7 @@ export default function PartsTable({
         price: number;
         postId: string;
         isActive: boolean;
+        category?: Category;
       }
     > = {};
 
@@ -119,6 +135,7 @@ export default function PartsTable({
           price: part.price || 0,
           postId: part.postId,
           isActive: part.isActive,
+          category: part.category,
         };
       } else {
         groups[key].totalWeight += weight;
@@ -141,8 +158,11 @@ export default function PartsTable({
 
   // 🔹 Filtro de seleção
   const filteredParts = useMemo(() => {
+    
+    
     if (!selectedPart) return groupedParts;
     return groupedParts.filter((p) => p.name === selectedPart);
+    
   }, [selectedPart, groupedParts]);
 
   // 🔹 Ajuste de preço (%)
@@ -273,6 +293,9 @@ export default function PartsTable({
   }
 };
 
+useEffect(() => {
+  refreshParts();
+}, []);
 
   return (
     <div className="flex flex-col gap-3 px-0">
@@ -347,15 +370,33 @@ export default function PartsTable({
           </thead>
           <tbody>
             {filteredParts.map((part) => {
+              
               const available = (
-                Number(part.totalWeight) - Number(part.totalSold)
-              ).toFixed(2);
-              return (
-                <tr key={part.id}>
-                  <td className="p-2 border-r">{part.name}</td>
-                  <td className="p-2 border-r">{available}kg</td>
+  Number(part.totalWeight) - Number(part.totalSold)
+).toFixed(2);
+console.log(part.name, part.category?.name, part.category?.special);
+
+// 🔹 Verifica se a categoria é especial
+const isSpecial = part.category?.special;
+
+// 🔹 Define a unidade dinamicamente
+const unitLabel = isSpecial ? "un" : "kg";
+
+return (
+  <tr key={part.id} className={isSpecial ? "bg-yellow-50" : ""}>
+    
+    <td className="p-2 border-r">
+      {part.name}
+      {isSpecial && <span className="ml-1 text-xs text-yellow-600">★</span>}
+    </td>
+    <td className="p-2 border-r">
+      {available}
+      {unitLabel}
+    </td>
+
                   <td className="p-2 border-r">
                     {formatCurrency(part.sellPrice)}
+                    
                   </td>
                   <td className="p-2 flex gap-2 items-start">
                     {/* <Dialog>

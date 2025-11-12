@@ -22,7 +22,7 @@ export const calculatePartsFromPattern = (pattern: Pattern, weight: number, pric
   }));
 
   const usedPercent = parts.reduce((sum, p) => sum + p.percentage, 0);
-  if (usedPercent < 100) {
+  if (usedPercent < 100 && !categoryIsSpecial) {
     parts.push({
       name: "Quebra",
       percentage: parseFloat((100 - usedPercent).toFixed(2)),
