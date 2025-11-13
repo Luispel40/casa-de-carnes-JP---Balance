@@ -107,6 +107,7 @@ model Sale {
   part       Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
   quantity   Float
   totalPrice Float
+  isSpecial   Boolean  @default(false)
   profit     Float
   createdAt  DateTime @default(now())
 }
@@ -128,6 +129,7 @@ model SaleNoteItem {
   sellPrice   Float
   totalPrice  Float
   profit      Float
+  isSpecial   Boolean  @default(false)
   saleNote    SaleNote @relation(fields: [saleNoteId], references: [id], onDelete: Cascade)
 }
 

@@ -53,7 +53,7 @@ interface EditPartSheetProps {
       }>
     >
   >;
-  
+
   fillAllRemaining: (index: number) => void;
   handleBaixa: () => Promise<void>;
   availableParts?: any[];
@@ -72,7 +72,11 @@ export default function EditPartSheet({
   const [isConfirming, setIsConfirming] = useState(false);
 
   // 🔹 Função auxiliar — incrementa o sold corretamente no banco
-  const soldIncrement = async (partId: string, soldToAdd: number, sellPrice: number) => {
+  const soldIncrement = async (
+    partId: string,
+    soldToAdd: number,
+    sellPrice: number
+  ) => {
     try {
       // Busca a parte atual
       const partRes = await fetch(`/api/parts/${partId}`);
@@ -163,16 +167,24 @@ export default function EditPartSheet({
   );
 
   const handleAddPart = (part: any) => {
+    const safeWeight = Number.isFinite(Number(part.weight))
+      ? Number(part.weight)
+      : 0;
+    const safeSold = Number.isFinite(Number(part.sold)) ? Number(part.sold) : 0;
+    const safeSellPrice = Number.isFinite(Number(part.sellPrice))
+      ? Number(part.sellPrice)
+      : 0;
+
     setSoldParts((prev) => [
       ...prev,
       {
         part: {
           ...part,
-          weight: Number(part.weight) || 0,
-          sold: Number(part.sold) || 0,
+          weight: safeWeight,
+          sold: safeSold,
         },
         soldValue: 0,
-        sellPrice: Number(part.sellPrice) || 0,
+        sellPrice: safeSellPrice,
       },
     ]);
     setIsPopoverOpen(false);
@@ -243,7 +255,9 @@ export default function EditPartSheet({
           return;
         }
         if (soldValue > restante) {
-          toast.error(`Você não pode vender mais que ${restante}kg de ${part.name}.`);
+          toast.error(
+            `Você não pode vender mais que ${restante}kg de ${part.name}.`
+          );
           setIsConfirming(false);
           return;
         }
@@ -262,6 +276,7 @@ export default function EditPartSheet({
           sellPrice,
           totalPrice,
           profit,
+          isSpecial: part.isSpecial ?? false,
         });
 
         // Registra a venda individual
@@ -273,6 +288,7 @@ export default function EditPartSheet({
             quantity: soldValue,
             totalPrice,
             profit,
+            isSpecial: part.isSpecial ?? false,
           }),
         });
       }
@@ -307,14 +323,20 @@ export default function EditPartSheet({
       <SheetContent className="px-6 flex flex-col max-h-screen">
         <SheetHeader>
           <SheetTitle>Editar Vendas de Partes</SheetTitle>
-          <SheetDescription>Adicione e ajuste as partes vendidas.</SheetDescription>
+          <SheetDescription>
+            Adicione e ajuste as partes vendidas.
+          </SheetDescription>
         </SheetHeader>
 
         {/* Adicionar Parte + Total */}
         <div className="mb-4 flex justify-between items-center">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
                 <Plus size={16} /> Adicionar Parte
               </Button>
             </PopoverTrigger>
@@ -328,12 +350,17 @@ export default function EditPartSheet({
                 <CommandList>
                   {filteredParts.length > 0 ? (
                     filteredParts.map((part) => (
-                      <CommandItem key={part.id} onSelect={() => handleAddPart(part)}>
+                      <CommandItem
+                        key={part.id}
+                        onSelect={() => handleAddPart(part)}
+                      >
                         {part.name}
                       </CommandItem>
                     ))
                   ) : (
-                    <div className="p-2 text-sm text-gray-500">Nenhum resultado</div>
+                    <div className="p-2 text-sm text-gray-500">
+                      Nenhum resultado
+                    </div>
                   )}
                 </CommandList>
               </Command>
@@ -347,37 +374,49 @@ export default function EditPartSheet({
         {/* Lista de Partes */}
         <div className="flex-1 overflow-y-auto border rounded-md max-h-[60vh] p-2 space-y-4">
           {soldParts.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">Nenhuma parte adicionada.</div>
+            <div className="text-center py-6 text-gray-500">
+              Nenhuma parte adicionada.
+            </div>
           ) : (
             soldParts.map((item, i) => {
-              const disponivel = item.part.weight - item.part.sold;
+              const disponivel = item.part.available ?? 0;
+              const isSpecial = item.part.isSpecial;
+
               return (
-                <div key={i} className="border p-3 rounded-md flex flex-col gap-2">
+                <div
+                  key={i}
+                  className="border p-3 rounded-md flex flex-col gap-2"
+                >
                   <div className="flex justify-between items-center">
                     <strong>{item.part.name}</strong>
-                    <Button size="icon-sm" variant="ghost" onClick={() => handleRemovePart(i)}>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => handleRemovePart(i)}
+                    >
                       ✕
                     </Button>
                   </div>
 
                   <div className="flex flex-wrap gap-2 items-end">
                     <div className="flex-1">
-                      <Label>Quantidade vendida (kg)</Label>
+                      <Label>Quantidade vendida</Label>
                       <Input
                         type="number"
                         min={0}
-                        max={disponivel}
+                        max={Number.isFinite(disponivel) ? disponivel : 0}
                         value={item.soldValue ?? ""}
                         onChange={(e) => {
-                          const val = e.target.value === "" ? 0 : Number(e.target.value);
+                          const val =
+                            e.target.value === "" ? 0 : Number(e.target.value);
                           handleSoldChange(i, val);
                         }}
                       />
+
                       <p className="text-xs text-gray-500 mt-1">
-                        Disponível: {disponivel}kg
+                        Disponível: {disponivel} {isSpecial ? "un" : "kg"}
                       </p>
                     </div>
-                    
                   </div>
 
                   <div>
@@ -385,13 +424,16 @@ export default function EditPartSheet({
                     <Input
                       type="number"
                       value={item.sellPrice}
-                      onChange={(e) => handleSellPriceChange(i, Number(e.target.value))}
+                      onChange={(e) =>
+                        handleSellPriceChange(i, Number(e.target.value))
+                      }
                       disabled
                     />
                   </div>
 
                   <p className="text-sm font-medium text-right mt-2">
-                    Subtotal: {formatCurrency(item.soldValue * item.sellPrice || 0)}
+                    Subtotal:{" "}
+                    {formatCurrency(item.soldValue * item.sellPrice || 0)}
                   </p>
                 </div>
               );
@@ -425,8 +467,10 @@ export default function EditPartSheet({
                 </p>
                 <ul className="list-disc list-inside text-sm text-muted-foreground">
                   {soldParts.map((p, i) => (
+                    
                     <li key={i}>
-                      {p.soldValue}kg de {p.part.name} por {formatCurrency(p.sellPrice)}
+                      {p.soldValue}{p.part.isSpecial ? "" : "kg de"} {p.part.name} por{" "}
+                      {formatCurrency(p.sellPrice)}
                     </li>
                   ))}
                 </ul>

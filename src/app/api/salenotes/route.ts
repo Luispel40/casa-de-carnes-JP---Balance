@@ -18,6 +18,7 @@ export async function POST(req: Request) {
             sellPrice: item.sellPrice,
             totalPrice: item.totalPrice,
             profit: item.profit,
+            isSpecial: item.isSpecial ?? false,
           })),
         },
       },

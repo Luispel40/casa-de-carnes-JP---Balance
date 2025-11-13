@@ -145,9 +145,7 @@ export default function PartsTable({
       }
     }
 
-    return Object.values(groups).filter(
-      (g) => g.totalWeight - g.totalSold > 0
-    );
+    return Object.values(groups).filter((g) => g.totalWeight - g.totalSold > 0);
   }, [localParts, userId]);
 
   // 🔹 Combobox de nomes únicos
@@ -158,11 +156,8 @@ export default function PartsTable({
 
   // 🔹 Filtro de seleção
   const filteredParts = useMemo(() => {
-    
-    
     if (!selectedPart) return groupedParts;
     return groupedParts.filter((p) => p.name === selectedPart);
-    
   }, [selectedPart, groupedParts]);
 
   // 🔹 Ajuste de preço (%)
@@ -214,88 +209,88 @@ export default function PartsTable({
 
   // 🔹 Confirma redução e atualiza parte original
   const handleConfirmReduction = async (part: any) => {
-  const reduction = reductionValues[part.id];
-  if (!reduction?.name || !reduction?.weight) {
-    toast.error("Preencha o nome e o peso da nova parte.");
-    return;
-  }
+    const reduction = reductionValues[part.id];
+    if (!reduction?.name || !reduction?.weight) {
+      toast.error("Preencha o nome e o peso da nova parte.");
+      return;
+    }
 
-  const weightToReduce = Number(reduction.weight);
-  const percent = Number(reduction.percent || "0");
+    const weightToReduce = Number(reduction.weight);
+    const percent = Number(reduction.percent || "0");
 
-  if (isNaN(weightToReduce) || weightToReduce <= 0) {
-    toast.error("Digite um peso válido para redução.");
-    return;
-  }
+    if (isNaN(weightToReduce) || weightToReduce <= 0) {
+      toast.error("Digite um peso válido para redução.");
+      return;
+    }
 
-  // 🟡 Buscar parte original no banco para obter o peso real
-  const res = await fetch(`/api/parts`);
-  const allParts = await res.json();
-  const originalPart = allParts.find((p: any) => p.id === part.id);
+    // 🟡 Buscar parte original no banco para obter o peso real
+    const res = await fetch(`/api/parts`);
+    const allParts = await res.json();
+    const originalPart = allParts.find((p: any) => p.id === part.id);
 
-  if (!originalPart) {
-    toast.error("Parte original não encontrada no banco.");
-    return;
-  }
+    if (!originalPart) {
+      toast.error("Parte original não encontrada no banco.");
+      return;
+    }
 
-  const available = Number(originalPart.weight) - Number(originalPart.sold);
-  if (weightToReduce >= available) {
-    toast.error("Peso de redução maior ou igual ao disponível!");
-    return;
-  }
+    const available = Number(originalPart.weight) - Number(originalPart.sold);
+    if (weightToReduce >= available) {
+      toast.error("Peso de redução maior ou igual ao disponível!");
+      return;
+    }
 
-  try {
-    const adjustedSellPrice =
-      originalPart.sellPrice && !isNaN(percent)
-        ? originalPart.sellPrice + (originalPart.sellPrice * percent) / 100
-        : originalPart.sellPrice;
+    try {
+      const adjustedSellPrice =
+        originalPart.sellPrice && !isNaN(percent)
+          ? originalPart.sellPrice + (originalPart.sellPrice * percent) / 100
+          : originalPart.sellPrice;
 
-    // ✅ Cria nova parte
-    const createRes = await fetch(`/api/parts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        postId: originalPart.postId,
-        name: reduction.name,
-        weight: weightToReduce,
-        price: originalPart.price,
-        sellPrice: adjustedSellPrice,
-        isActive: originalPart.isActive ?? true,
-        sold: 0,
-      }),
-    });
+      // ✅ Cria nova parte
+      const createRes = await fetch(`/api/parts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: originalPart.postId,
+          name: reduction.name,
+          weight: weightToReduce,
+          price: originalPart.price,
+          sellPrice: adjustedSellPrice,
+          isActive: originalPart.isActive ?? true,
+          sold: 0,
+        }),
+      });
 
-    if (!createRes.ok) throw new Error("Erro ao criar nova parte");
+      if (!createRes.ok) throw new Error("Erro ao criar nova parte");
 
-    // ✅ Atualiza peso da parte original com base no valor real
-    const updatedWeight = Number(originalPart.weight) - weightToReduce;
-    const patchRes = await fetch(`/api/parts/${part.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weight: updatedWeight }),
-    });
+      // ✅ Atualiza peso da parte original com base no valor real
+      const updatedWeight = Number(originalPart.weight) - weightToReduce;
+      const patchRes = await fetch(`/api/parts/${part.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weight: updatedWeight }),
+      });
 
-    if (!patchRes.ok) throw new Error("Erro ao atualizar parte original");
+      if (!patchRes.ok) throw new Error("Erro ao atualizar parte original");
 
-    toast.success(
-      `Parte "${originalPart.name}" reduzida. Nova parte "${reduction.name}" criada (${weightToReduce}kg).`
-    );
+      toast.success(
+        `Parte "${originalPart.name}" reduzida. Nova parte "${reduction.name}" criada (${weightToReduce}kg).`
+      );
 
-    setReductionValues((prev) => ({
-      ...prev,
-      [part.id]: { name: "", weight: "", percent: "" },
-    }));
-    setOpenDialog({ id: null, type: null });
+      setReductionValues((prev) => ({
+        ...prev,
+        [part.id]: { name: "", weight: "", percent: "" },
+      }));
+      setOpenDialog({ id: null, type: null });
+      refreshParts();
+    } catch (err) {
+      console.error("Erro no handleConfirmReduction:", err);
+      toast.error("Erro ao reduzir parte.");
+    }
+  };
+
+  useEffect(() => {
     refreshParts();
-  } catch (err) {
-    console.error("Erro no handleConfirmReduction:", err);
-    toast.error("Erro ao reduzir parte.");
-  }
-};
-
-useEffect(() => {
-  refreshParts();
-}, []);
+  }, []);
 
   return (
     <div className="flex flex-col gap-3 px-0">
@@ -370,33 +365,33 @@ useEffect(() => {
           </thead>
           <tbody>
             {filteredParts.map((part) => {
-              
-              const available = (
-  Number(part.totalWeight) - Number(part.totalSold)
-).toFixed(2);
-console.log(part.name, part.category?.name, part.category?.special);
+              // 🔹 Verifica se a categoria é especial
+              const isSpecial = part.category?.special;
 
-// 🔹 Verifica se a categoria é especial
-const isSpecial = part.category?.special;
+              // 🔹 Define a unidade dinamicamente
+              const unitLabel = isSpecial ? "un" : "kg";
+              let available = Number(part.totalWeight) - Number(part.totalSold);
 
-// 🔹 Define a unidade dinamicamente
-const unitLabel = isSpecial ? "un" : "kg";
+              // 🔹 Retorna conforme o tipo
+              available = isSpecial
+                ? Math.floor(available)
+                : Number(available.toFixed(2));
 
-return (
-  <tr key={part.id} className={isSpecial ? "bg-yellow-50" : ""}>
-    
-    <td className="p-2 border-r">
-      {part.name}
-      {isSpecial && <span className="ml-1 text-xs text-yellow-600">★</span>}
-    </td>
-    <td className="p-2 border-r">
-      {available}
-      {unitLabel}
-    </td>
+              return (
+                <tr key={part.id} className={isSpecial ? "bg-yellow-50" : ""}>
+                  <td className="p-2 border-r">
+                    {part.name}
+                    {isSpecial && (
+                      <span className="ml-1 text-xs text-yellow-600">★</span>
+                    )}
+                  </td>
+                  <td className="p-2 border-r">
+                    {available}
+                    {unitLabel}
+                  </td>
 
                   <td className="p-2 border-r">
                     {formatCurrency(part.sellPrice)}
-                    
                   </td>
                   <td className="p-2 flex gap-2 items-start">
                     {/* <Dialog>
@@ -431,7 +426,7 @@ return (
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleOpenEditSheet(part)}
+                      onClick={() => handleOpenEditSheet({ ...part, available, isSpecial })}
                     >
                       <DollarSign />
                     </Button>
@@ -497,7 +492,8 @@ return (
                                   {formatCurrency(
                                     part.price +
                                       (part.price *
-                                        (parseFloat(percentages[part.id]) || 0)) /
+                                        (parseFloat(percentages[part.id]) ||
+                                          0)) /
                                         100
                                   )}
                                 </span>
@@ -505,9 +501,7 @@ return (
                             </div>
                             <DialogFooter>
                               <Button
-                                onClick={() =>
-                                  handleConfirmPriceUpdate(part)
-                                }
+                                onClick={() => handleConfirmPriceUpdate(part)}
                               >
                                 Confirmar
                               </Button>
@@ -575,15 +569,12 @@ return (
                               <p className="text-xs text-gray-500">
                                 Disponível: {available}kg
                                 <br />
-                                Preço atual:{" "}
-                                {formatCurrency(part.sellPrice)}
+                                Preço atual: {formatCurrency(part.sellPrice)}
                               </p>
                             </div>
                             <DialogFooter>
                               <Button
-                                onClick={() =>
-                                  handleConfirmReduction(part)
-                                }
+                                onClick={() => handleConfirmReduction(part)}
                               >
                                 Confirmar
                               </Button>

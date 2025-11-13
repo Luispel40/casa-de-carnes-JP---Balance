@@ -11,7 +11,7 @@ export async function GET() {
             name: true,
             postId: true,
             post: {
-              select: { title: true, userId: true },
+              select: { title: true, userId: true, category: { select: { id: true, name: true, special: true } } },
             },
           },
         },
@@ -44,10 +44,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { partId, quantity, totalPrice, profit } = await req.json();
+    const { partId, quantity, totalPrice, profit, isSpecial } = await req.json();
 
     const sale = await db.sale.create({
-      data: { partId, quantity, totalPrice, profit },
+      data: { partId, quantity, totalPrice, profit, isSpecial: isSpecial ?? false },
     });
 
     return NextResponse.json(sale, { status: 201 });
