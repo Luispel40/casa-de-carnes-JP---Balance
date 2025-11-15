@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type Tab = "user" | "employees" | "categories" | "posts" | "parts" | "patterns";
+type Tab = "user"  | "categories" | "posts" | "parts" | "patterns";
 
 interface SettingsContextType {
   activeTab: Tab;

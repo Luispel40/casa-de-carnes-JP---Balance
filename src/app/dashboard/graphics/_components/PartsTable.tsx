@@ -426,7 +426,19 @@ export default function PartsTable({
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleOpenEditSheet({ ...part, available, isSpecial })}
+                      // 💡 Ajuste: Passa 'isSpecial' e 'available' na chamada
+                      onClick={() =>
+                        handleOpenEditSheet({
+                          ...part,
+                          available,
+                          isSpecial: isSpecial, // ✅ Garantindo que a flag seja passada
+                          // part.price é usado em editPartSheet para calcular lucro
+                          price: part.price,
+                          // part.totalWeight e part.totalSold também são relevantes
+                          weight: part.totalWeight,
+                          sold: part.totalSold,
+                        })
+                      }
                     >
                       <DollarSign />
                     </Button>

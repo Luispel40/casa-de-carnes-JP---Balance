@@ -35,26 +35,27 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/helpers/format-currency";
 import { playSound } from "utils/play-sound";
 import { useSession } from "next-auth/react";
-import router from "next/router";
+
+interface SoldPartItem {
+  part: {
+    id: string;
+    name: string;
+    weight: number;
+    sold: number;
+    isSpecial?: boolean; // 👈 Adicionado
+    price?: number;
+    postId?: string;
+    // ... outras propriedades da parte
+  };
+  soldValue: number;
+  sellPrice: number;
+}
 
 interface EditPartSheetProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  soldParts: Array<{
-    part: any;
-    soldValue: number;
-    sellPrice: number;
-  }>;
-  setSoldParts: React.Dispatch<
-    React.SetStateAction<
-      Array<{
-        part: any;
-        soldValue: number;
-        sellPrice: number;
-      }>
-    >
-  >;
-
+  soldParts: Array<SoldPartItem>;
+  setSoldParts: React.Dispatch<React.SetStateAction<Array<SoldPartItem>>>;
   fillAllRemaining: (index: number) => void;
   handleBaixa: () => Promise<void>;
   availableParts?: any[];
@@ -129,12 +130,10 @@ export default function EditPartSheet({
 
   // Buscar partes disponíveis
   useEffect(() => {
-    if (availableParts && availableParts.length > 0) {
-      setAvailableParts(availableParts);
-      return;
-    }
-
     if (!session?.user?.id) return;
+
+    // Se as partes já foram carregadas, não refaz o fetch a menos que explicitamente vazio
+    if (availableParts.length > 0) return;
 
     const fetchParts = async () => {
       try {
@@ -146,12 +145,18 @@ export default function EditPartSheet({
         }
 
         const data = await res.json();
+        
+        // ✨ Garantindo que isSpecial seja um booleano
+        const processedData = data.map((p: any) => ({
+            ...p,
+            isSpecial: p.category?.special ?? false,
+        }));
 
-        if (!data || data.length === 0) {
+        if (!processedData || processedData.length === 0) {
           toast.warning("Nenhuma parte disponível encontrada.");
         }
 
-        setAvailableParts(data);
+        setAvailableParts(processedData);
       } catch (err) {
         console.error("Erro no fetchParts:", err);
         toast.error("Erro ao carregar partes.");
@@ -159,12 +164,15 @@ export default function EditPartSheet({
     };
 
     fetchParts();
-  }, [availableParts, session]);
+  }, [session]); // Removido availableParts do array de dependências para evitar loop infinito
 
   const filteredParts = availableParts.filter(
     (p) =>
+      // Filtra partes que já estão no carrinho E filtra pelo termo de busca
       !soldParts.some((s) => s.part.id === p.id) &&
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      // Filtra partes com disponibilidade > 0
+      (Number(p.weight) || 0) - (Number(p.sold) || 0) > 0
   );
 
   const handleAddPart = (part: any) => {
@@ -175,6 +183,8 @@ export default function EditPartSheet({
     const safeSellPrice = Number.isFinite(Number(part.sellPrice))
       ? Number(part.sellPrice)
       : 0;
+    
+    const isSpecial = part.isSpecial ?? false; // Adicionando isSpecial
 
     setSoldParts((prev) => [
       ...prev,
@@ -183,29 +193,40 @@ export default function EditPartSheet({
           ...part,
           weight: safeWeight,
           sold: safeSold,
+          isSpecial: isSpecial, // ✅ Adicionado
         },
         soldValue: 0,
         sellPrice: safeSellPrice,
       },
     ]);
     setIsPopoverOpen(false);
+    setSearchTerm(""); // Limpa a busca
   };
 
   const handleSoldChange = (index: number, value: number) => {
     setSoldParts((prev) => {
       const updated = [...prev];
       const item = { ...updated[index] };
-      const maxAvailable = item.part.weight - (item.part.sold || 0);
+      // 🔹 Lógica de cálculo de máximo disponível no carrinho
+      const maxAvailable =
+        item.part.weight - (item.part.sold || 0);
+
+      const unitLabel = item.part.isSpecial ? "unidade(s)" : "kg"; // 👈 Unidade dinâmica
 
       if (isNaN(value)) {
         item.soldValue = 0;
       } else if (value > maxAvailable) {
-        toast.warning(`Máximo disponível: ${maxAvailable}kg`);
+        toast.warning(
+          `Máximo disponível: ${maxAvailable.toFixed(
+            item.part.isSpecial ? 0 : 2
+          )} ${unitLabel}`
+        ); // Arredonda para 0 casas se for especial, 2 se for peso
         item.soldValue = maxAvailable;
       } else if (value < 0) {
         item.soldValue = 0;
       } else {
-        item.soldValue = value;
+        // Para partes não especiais (peso), permite até 2 casas decimais na exibição
+        item.soldValue = item.part.isSpecial ? Math.floor(value) : Number(value.toFixed(2));
       }
 
       updated[index] = item;
@@ -248,7 +269,9 @@ export default function EditPartSheet({
 
       for (const item of soldParts) {
         const { part, soldValue, sellPrice } = item;
-        const restante = part.weight - (part.sold || 0);
+        // 🔹 Usando o valor real do banco (weight - sold) para conferir
+        const restante = part.weight - (part.sold || 0); 
+        const unitLabel = part.isSpecial ? "unidade(s)" : "kg";
 
         if (soldValue <= 0) {
           toast.error(`Quantidade inválida para ${part.name}.`);
@@ -257,7 +280,9 @@ export default function EditPartSheet({
         }
         if (soldValue > restante) {
           toast.error(
-            `Você não pode vender mais que ${restante}kg de ${part.name}.`
+            `Você não pode vender mais que ${restante.toFixed(
+              part.isSpecial ? 0 : 2
+            )} ${unitLabel} de ${part.name}.`
           );
           setIsConfirming(false);
           return;
@@ -380,8 +405,12 @@ export default function EditPartSheet({
             </div>
           ) : (
             soldParts.map((item, i) => {
-              const disponivel = item.part.available ?? 0;
-              const isSpecial = item.part.isSpecial;
+              // 🔹 Recalcula a disponibilidade para exibição no carrinho
+              const maxAvailable = item.part.weight - (item.part.sold || 0);
+              const disponivel = item.part.isSpecial
+                ? Math.floor(maxAvailable)
+                : Number(maxAvailable.toFixed(2));
+              const unitLabel = item.part.isSpecial ? "un" : "kg";
 
               return (
                 <div
@@ -405,7 +434,7 @@ export default function EditPartSheet({
                       <Input
                         type="number"
                         min={0}
-                        max={Number.isFinite(disponivel) ? disponivel : 0}
+                        max={disponivel} // Usa o valor já formatado
                         value={item.soldValue ?? ""}
                         onChange={(e) => {
                           const val =
@@ -415,7 +444,7 @@ export default function EditPartSheet({
                       />
 
                       <p className="text-xs text-gray-500 mt-1">
-                        Disponível: {disponivel} {isSpecial ? "un" : "kg"}
+                        Disponível: {disponivel} {unitLabel}
                       </p>
                     </div>
                   </div>
@@ -468,9 +497,11 @@ export default function EditPartSheet({
                 </p>
                 <ul className="list-disc list-inside text-sm text-muted-foreground">
                   {soldParts.map((p, i) => (
-                    
+                    // 🔹 Ajuste aqui para exibir a unidade correta no resumo
                     <li key={i}>
-                      {p.soldValue}{p.part.isSpecial ? "" : "kg de"} {p.part.name} por{" "}
+                      {p.soldValue.toFixed(p.part.isSpecial ? 0 : 2)}{" "}
+                      {p.part.isSpecial ? "un de" : "kg de"}{" "}
+                      {p.part.name} por{" "}
                       {formatCurrency(p.sellPrice)}
                     </li>
                   ))}

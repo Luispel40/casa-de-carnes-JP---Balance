@@ -21,8 +21,8 @@ export default function SettingsContent() {
     switch (activeTab) {
       case "user":
         return <UserForm userId={userId!} />;
-      case "employees":
-        return <EmployeesForm />;
+      // case "employees":
+      //   return <EmployeesForm />;
       case "categories":
         return <CategoriesForm />;
       case "posts":
@@ -38,7 +38,7 @@ export default function SettingsContent() {
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">
         {activeTab === "user" && "Perfil do Usuário"}
-        {activeTab === "employees" && "Funcionários"}
+        {/* {activeTab === "employees" && "Funcionários"} */}
         {activeTab === "categories" && "Categorias"}
         {activeTab === "posts" && "Posts"}
         {activeTab === "patterns" && "Padrões"}

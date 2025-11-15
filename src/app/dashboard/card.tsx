@@ -231,7 +231,7 @@ export default function CardItem({ userId, selected }: CardItemProps) {
       case "settings":
         return (
           <div className="space-y-3">
-            <NativeSelect
+            {/* <NativeSelect
               onChange={(e) => setSelectedType(e.target.value)}
               value={selectedType}
             >
@@ -278,7 +278,8 @@ export default function CardItem({ userId, selected }: CardItemProps) {
                 }}
                 userId={userId}
               />
-            )}
+            )} */}
+            <h1>Clique para acessar</h1>
           </div>
         );
 

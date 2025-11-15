@@ -15,7 +15,7 @@ import clsx from "clsx";
 
 const tabs = [
   { id: "user", name: "Usuário", icon: User },
-  { id: "employees", name: "Funcionários", icon: Users },
+  // { id: "employees", name: "Funcionários", icon: Users },
   { id: "categories", name: "Categorias", icon: Layers },
   { id: "posts", name: "Posts", icon: Package },
   { id: "patterns", name: "Padrões", icon: FileText },
