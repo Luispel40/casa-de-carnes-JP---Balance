@@ -98,6 +98,7 @@ export default function CategoriesForm() {
                 checked={form.special}
                 onCheckedChange={(e) => setForm({ ...form, special: e })}
               />
+              <p>{form.special ? "un" : "kg"}</p>
             </Badge>
             <Input
               placeholder="Nome da categoria"

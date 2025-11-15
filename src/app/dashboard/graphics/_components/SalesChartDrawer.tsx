@@ -82,7 +82,8 @@ export default function SalesChartDrawer({
         <div className="mb-4">
           <NativeSelect
             value={salesPeriod}
-            onChange={(e) => setSalesPeriod(e.target.value as any)}
+            onChange={(e) => {
+              setSalesPeriod(e.target.value as any)}}
           >
             <option value="hour">Última hora</option>
             <option value="today">Hoje</option>
