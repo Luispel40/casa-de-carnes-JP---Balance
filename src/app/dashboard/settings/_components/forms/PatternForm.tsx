@@ -163,8 +163,8 @@ export default function PatternForm() {
       }),
     });
 
-    if (!res.ok) {
-      toast.error("Erro ao salvar padrão");
+    if (!res.ok || patterns.some((p) => p.name === form.name)) {
+      toast.error(`Erro ao cirar padrão, o item ${form.name} já existe!` || `Erro ao criar padrão: ${res.statusText}`);
       return;
     }
 

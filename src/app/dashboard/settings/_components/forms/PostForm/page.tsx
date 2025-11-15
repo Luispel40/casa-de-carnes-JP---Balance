@@ -26,10 +26,10 @@ import { Button } from "@/_components/ui/button";
 import { Switch } from "@/_components/ui/switch";
 
 type Category = {
-  id: string
-  name: string
-  special?: boolean
-}
+  id: string;
+  name: string;
+  special?: boolean;
+};
 
 export default function PostsFormTest() {
   const {
@@ -127,17 +127,20 @@ export default function PostsFormTest() {
                 }
                 value={form.weight}
                 onChange={(e) => {
-    const category = categories.find((c) => c.id === form.categoryId);
-    const value = e.target.value;
+                  const category = categories.find(
+                    (c) => c.id === form.categoryId
+                  );
+                  const value = e.target.value;
 
-    // 🔹 Se for especial, bloqueia valores com ponto ou vírgula
-    if (category?.special) {
-      if (value.includes('.') || value.includes(',')) return; 
-      // Apenas números inteiros
-      if (!/^\d*$/.test(value)) return;
-    }
+                  // 🔹 Se for especial, bloqueia valores com ponto ou vírgula
+                  if (category?.special) {
+                    if (value.includes(".") || value.includes(",")) return;
+                    // Apenas números inteiros
+                    if (!/^\d*$/.test(value)) return;
+                  }
 
-    handleChange(e)}}
+                  handleChange(e);
+                }}
                 placeholder={
                   categories.find((c) => c.id === form.categoryId)?.special
                     ? "Quantidade"
@@ -209,8 +212,11 @@ export default function PostsFormTest() {
 
             <div className="flex gap-2">
               <Button type="submit">
-                {isEditing ? "Salvar Edição" : (alreadyExists ? "Adicionar ao Existente" : "Adicionar Novo")}
-                
+                {isEditing
+                  ? "Salvar Edição"
+                  : alreadyExists
+                  ? "Adicionar ao Existente"
+                  : "Adicionar Novo"}
               </Button>
               {isEditing && (
                 <Button variant="outline" onClick={resetForm}>
@@ -231,8 +237,10 @@ export default function PostsFormTest() {
                 <p className="font-medium">{post.title}</p>
                 <p className="text-sm text-muted-foreground">
                   {post.category?.name || "Sem categoria"} •{" "}
-                  {post.category?.special ? `${post.weight}un` : `${post.weight}kg`} • R${post.price.toFixed(2)} → Venda
-                  R$
+                  {post.category?.special
+                    ? `${post.weight}un`
+                    : `${post.weight}kg`}{" "}
+                  • R${post.price.toFixed(2)} → Venda R$
                   {(
                     post.sellPrice ?? post.price * (1 + MARGIN_PERCENTAGE)
                   ).toFixed(2)}
@@ -242,7 +250,8 @@ export default function PostsFormTest() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleEdit(post)}
+                  // onClick={() => handleEdit(post)}
+                  disabled={true}
                 >
                   Editar
                 </Button>

@@ -60,7 +60,7 @@ export default function CategoriesForm() {
       body: JSON.stringify(form),
     });
 
-    if (!res.ok) {
+    if (!res.ok || categories.some((c) => c.name === form.name)) {
       toast.error("Erro ao salvar categoria");
       return;
     }

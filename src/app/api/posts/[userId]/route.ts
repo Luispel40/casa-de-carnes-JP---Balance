@@ -86,7 +86,6 @@ export async function POST(req: NextRequest, context: any) {
   }
 }
 
-// 🟠 PUT — Atualiza e faz merge de um post existente
 export async function PUT(req: NextRequest, context: any) {
   const { userId } = context.params;
   const body: PostInput = await req.json();
@@ -94,7 +93,9 @@ export async function PUT(req: NextRequest, context: any) {
   try {
     const { id, title, weight, price, sellPrice, isActive, categoryId, parts = [] } = body;
 
-    if (!id) return NextResponse.json({ error: "ID do post é obrigatório" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "ID do post é obrigatório" }, { status: 400 });
+    }
 
     const existing = await db.post.findUnique({
       where: { id },
@@ -105,14 +106,13 @@ export async function PUT(req: NextRequest, context: any) {
       return NextResponse.json({ error: "Post não encontrado" }, { status: 404 });
     }
 
-    // 🔹 Merge principal
+    // ✅ O peso e o preço já vêm calculados do frontend, então não somamos
     const mergedWeight = existing.weight + weight;
-    const mergedPrice = (existing.price * existing.weight + price * weight) / mergedWeight;
-    const mergedSellPrice =
-      ((existing.sellPrice ?? 0) * existing.weight + (sellPrice ?? 0) * weight) / mergedWeight;
+    const mergedPrice = price;
+    const mergedSellPrice = sellPrice ?? existing.sellPrice ?? 0;
 
-    // 🔹 Merge de partes
-    const mergedParts: PartInput[] = [...existing.parts.map((p) => ({
+    // 🔹 Merge das partes
+    const mergedParts: PartInput[] = [...existing.parts.map(p => ({
       id: p.id,
       name: p.name,
       weight: p.weight,
@@ -122,27 +122,27 @@ export async function PUT(req: NextRequest, context: any) {
     }))];
 
     for (const newPart of parts) {
-      const existingPart = mergedParts.find((p) => p.name === newPart.name);
-      if (existingPart) {
-        const totalWeight = existingPart.weight + newPart.weight;
-        existingPart.price =
-          (existingPart.price * existingPart.weight + newPart.price * newPart.weight) / totalWeight;
-        existingPart.sellPrice =
-          ((existingPart.sellPrice ?? 0) * existingPart.weight +
-            (newPart.sellPrice ?? 0) * newPart.weight) / totalWeight;
-        existingPart.weight = totalWeight;
-      } else {
-        mergedParts.push({
-          name: newPart.name,
-          weight: newPart.weight,
-          price: newPart.price,
-          sellPrice: newPart.sellPrice ?? 0,
-          isActive: newPart.isActive ?? true,
-        });
-      }
-    }
+  const existingPart = mergedParts.find((p) => p.name === newPart.name);
+  if (existingPart) {
+    // ✅ Atualiza com o novo peso direto, sem somar
+    existingPart.weight = newPart.weight;
+    existingPart.price = newPart.price;
+    existingPart.sellPrice = newPart.sellPrice ?? existingPart.sellPrice;
+    existingPart.isActive = newPart.isActive ?? existingPart.isActive;
+  } else {
+    // ✅ Parte nova: adiciona normalmente
+    mergedParts.push({
+      name: newPart.name,
+      weight: newPart.weight,
+      price: newPart.price,
+      sellPrice: newPart.sellPrice ?? 0,
+      isActive: newPart.isActive ?? true,
+    });
+  }
+}
 
-    // 🔹 Atualiza post e recria as partes
+
+    // 🔹 Atualiza o post e recria as partes
     const updatedPost = await db.post.update({
       where: { id },
       data: {
@@ -155,7 +155,7 @@ export async function PUT(req: NextRequest, context: any) {
         userId,
         parts: {
           deleteMany: {},
-          create: mergedParts.map((p) => ({
+          create: mergedParts.map(p => ({
             name: p.name,
             weight: p.weight,
             price: p.price,
@@ -174,6 +174,7 @@ export async function PUT(req: NextRequest, context: any) {
     return NextResponse.json({ error: "Erro ao atualizar post" }, { status: 500 });
   }
 }
+
 
 // 🔴 DELETE — Remove post e partes (cascade)
 export async function DELETE(req: NextRequest) {
