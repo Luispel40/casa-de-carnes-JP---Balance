@@ -10,4 +10,4 @@ timeout /t 5 /nobreak
 
 REM --- Abre o Chrome ou Edge em modo popup na porta 3000 ---
 REM --- Ajuste chrome.exe para o caminho correto se necessário ---
-start "" "chrome.exe" --app=http://localhost:3000 --window-size=800,600 --window-position=100,100
+start "" "msedge.exe" --app=http://localhost:3000 --window-size=800,600 --window-position=100,100
